@@ -3,6 +3,7 @@
 
 #include "LDAPConnection.hpp"
 #include "LDAPManagerBase.hpp"
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -18,11 +19,13 @@ public:
   bool deleteOrganization(const std::string &orgName,
                           const std::string &baseDN);
   bool listOrganizationalUnits(const std::string &baseDN);
-  bool createOrganizationalUnit(const std::string &ouName,
-                                const std::string &baseDN,
-                                const std::string &password = "",
-                                const std::string &fullname = "",
-                                const std::string &email = "");
+  bool createOrganizationalUnit(
+      const std::string &ouName, const std::string &baseDN,
+      const std::optional<std::string> &telephoneNumber,
+      const std::optional<std::string> &street,
+      const std::optional<std::string> &postalCode,
+      const std::optional<std::string> &st, const std::optional<std::string> &l,
+      const std::optional<std::string> &description);
   bool deleteOrganizationalUnit(const std::string &ouName,
                                 const std::string &baseDN);
   bool updateOrganizationalUnit(const std::string &ouName,
@@ -30,30 +33,42 @@ public:
   bool listPeople(const std::string &baseDN);
   bool createPerson(
       const std::string &personName, const std::string &baseDN,
-      const std::string &uid = "", const std::string &givenName = "",
-      const std::string &sn = "", const std::string &mail = "",
-      const std::string &displayName = "",
-      const std::string &employeeNumber = "",
-      const std::string &employeeType = "",
-      const std::string &departmentNumber = "", const std::string &mobile = "",
-      const std::string &homePhone = "", const std::string &pager = "",
-      const std::string &title = "", const std::string &telephoneNumber = "",
-      const std::string &street = "", const std::string &postalCode = "",
-      const std::string &l = "", const std::string &st = "",
-      const std::string &c = "");
+      const std::optional<std::string> &uid,
+      const std::optional<std::string> &givenName,
+      const std::optional<std::string> &sn,
+      const std::optional<std::string> &mail,
+      const std::optional<std::string> &displayName,
+      const std::optional<std::string> &employeeNumber,
+      const std::optional<std::string> &employeeType,
+      const std::optional<std::string> &departmentNumber,
+      const std::optional<std::string> &mobile,
+      const std::optional<std::string> &homePhone,
+      const std::optional<std::string> &pager,
+      const std::optional<std::string> &title,
+      const std::optional<std::string> &telephoneNumber,
+      const std::optional<std::string> &street,
+      const std::optional<std::string> &postalCode,
+      const std::optional<std::string> &l, const std::optional<std::string> &st,
+      const std::optional<std::string> &c);
   bool updatePerson(
       const std::string &personName, const std::string &baseDN,
-      const std::string &uid = "", const std::string &givenName = "",
-      const std::string &sn = "", const std::string &mail = "",
-      const std::string &displayName = "",
-      const std::string &employeeNumber = "",
-      const std::string &employeeType = "",
-      const std::string &departmentNumber = "", const std::string &mobile = "",
-      const std::string &homePhone = "", const std::string &pager = "",
-      const std::string &title = "", const std::string &telephoneNumber = "",
-      const std::string &street = "", const std::string &postalCode = "",
-      const std::string &l = "", const std::string &st = "",
-      const std::string &c = "");
+      const std::optional<std::string> &uid,
+      const std::optional<std::string> &givenName,
+      const std::optional<std::string> &sn,
+      const std::optional<std::string> &mail,
+      const std::optional<std::string> &displayName,
+      const std::optional<std::string> &employeeNumber,
+      const std::optional<std::string> &employeeType,
+      const std::optional<std::string> &departmentNumber,
+      const std::optional<std::string> &mobile,
+      const std::optional<std::string> &homePhone,
+      const std::optional<std::string> &pager,
+      const std::optional<std::string> &title,
+      const std::optional<std::string> &telephoneNumber,
+      const std::optional<std::string> &street,
+      const std::optional<std::string> &postalCode,
+      const std::optional<std::string> &l, const std::optional<std::string> &st,
+      const std::optional<std::string> &c);
   bool deletePerson(const std::string &personName, const std::string &baseDN);
 
   void printUsage() const override;

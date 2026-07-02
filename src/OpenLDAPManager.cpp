@@ -34,47 +34,65 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
 
   if (command == "create-ou") {
     static struct option long_options[] = {
-        {"password", required_argument, 0, 'p'},
-        {"fullname", required_argument, 0, 'f'},
-        {"email", required_argument, 0, 'e'},
+        {"telephonenumber", required_argument, 0, 'p'},
+        {"street", required_argument, 0, 's'},
+        {"postalcode", required_argument, 0, 'z'},
+        {"st", required_argument, 0, 'S'},
+        {"l", required_argument, 0, 'L'},
+        {"description", required_argument, 0, 'd'},
         {0, 0, 0, 0}};
 
     std::string ouName;
-    std::string password;
-    std::string fullname;
-    std::string email;
+    std::optional<std::string> telephoneNumber;
+    std::optional<std::string> street;
+    std::optional<std::string> postalCode;
+    std::optional<std::string> st;
+    std::optional<std::string> l;
+    std::optional<std::string> description;
 
     int opt;
     int option_index = 0;
 
-    while ((opt = getopt_long(argc, argv, "p:f:e:", long_options,
+    while ((opt = getopt_long(argc, argv, "p:s:z:S:L:d:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
       case 'p':
-        password = optarg;
+        telephoneNumber = optarg;
         break;
-      case 'f':
-        fullname = optarg;
+      case 's':
+        street = optarg;
         break;
-      case 'e':
-        email = optarg;
+      case 'z':
+        postalCode = optarg;
+        break;
+      case 'S':
+        st = optarg;
+        break;
+      case 'L':
+        l = optarg;
+        break;
+      case 'd':
+        description = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-ou <ou-name> [-p password] "
-                   "[-f fullname] [-e email]");
+        console::e("Usage: ldapcli create-ou <ou-name> [-p telephone] "
+                   "[-s street] [-z postalcode] [-S state] [-L city] "
+                   "[-d description]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-ou <ou-name> [-p password] "
-                 "[-f fullname] [-e email]");
+      console::e("Usage: ldapcli create-ou <ou-name> [-p telephone] "
+                 "[-s street] [-z postalcode] [-S state] [-L city] "
+                 "[-d description]");
       return false;
     }
 
     ouName = argv[optind];
 
-    return createOrganizationalUnit(ouName, baseDN);
+    return createOrganizationalUnit(ouName, baseDN, telephoneNumber, street,
+                                    postalCode, st, l, description);
   } else if (command == "delete-ou") {
     if (optind >= argc) {
       console::e("Usage: ldapcli delete-ou <ou-name>");
@@ -120,10 +138,24 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
         {0, 0, 0, 0}};
 
     std::string personName;
-    std::string uid, givenName, sn, mail, displayName;
-    std::string employeeNumber, employeeType, departmentNumber;
-    std::string mobile, homePhone, pager, title, telephoneNumber;
-    std::string street, postalCode, l, st, c;
+    std::optional<std::string> uid;
+    std::optional<std::string> givenName;
+    std::optional<std::string> sn;
+    std::optional<std::string> mail;
+    std::optional<std::string> displayName;
+    std::optional<std::string> employeeNumber;
+    std::optional<std::string> employeeType;
+    std::optional<std::string> departmentNumber;
+    std::optional<std::string> mobile;
+    std::optional<std::string> homePhone;
+    std::optional<std::string> pager;
+    std::optional<std::string> title;
+    std::optional<std::string> telephoneNumber;
+    std::optional<std::string> street;
+    std::optional<std::string> postalCode;
+    std::optional<std::string> l;
+    std::optional<std::string> st;
+    std::optional<std::string> c;
 
     int opt;
     int option_index = 0;
@@ -245,10 +277,24 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
         {0, 0, 0, 0}};
 
     std::string personName;
-    std::string uid, givenName, sn, mail, displayName;
-    std::string employeeNumber, employeeType, departmentNumber;
-    std::string mobile, homePhone, pager, title, telephoneNumber;
-    std::string street, postalCode, l, st, c;
+    std::optional<std::string> uid;
+    std::optional<std::string> givenName;
+    std::optional<std::string> sn;
+    std::optional<std::string> mail;
+    std::optional<std::string> displayName;
+    std::optional<std::string> employeeNumber;
+    std::optional<std::string> employeeType;
+    std::optional<std::string> departmentNumber;
+    std::optional<std::string> mobile;
+    std::optional<std::string> homePhone;
+    std::optional<std::string> pager;
+    std::optional<std::string> title;
+    std::optional<std::string> telephoneNumber;
+    std::optional<std::string> street;
+    std::optional<std::string> postalCode;
+    std::optional<std::string> l;
+    std::optional<std::string> st;
+    std::optional<std::string> c;
 
     int opt;
     int option_index = 0;
@@ -398,14 +444,23 @@ bool OpenLDAPManager::listPeople(const std::string &baseDN) {
 
 bool OpenLDAPManager::createPerson(
     const std::string &personName, const std::string &baseDN,
-    const std::string &uid, const std::string &givenName, const std::string &sn,
-    const std::string &mail, const std::string &displayName,
-    const std::string &employeeNumber, const std::string &employeeType,
-    const std::string &departmentNumber, const std::string &mobile,
-    const std::string &homePhone, const std::string &pager,
-    const std::string &title, const std::string &telephoneNumber,
-    const std::string &street, const std::string &postalCode,
-    const std::string &l, const std::string &st, const std::string &c) {
+    const std::optional<std::string> &uid,
+    const std::optional<std::string> &givenName,
+    const std::optional<std::string> &sn,
+    const std::optional<std::string> &mail,
+    const std::optional<std::string> &displayName,
+    const std::optional<std::string> &employeeNumber,
+    const std::optional<std::string> &employeeType,
+    const std::optional<std::string> &departmentNumber,
+    const std::optional<std::string> &mobile,
+    const std::optional<std::string> &homePhone,
+    const std::optional<std::string> &pager,
+    const std::optional<std::string> &title,
+    const std::optional<std::string> &telephoneNumber,
+    const std::optional<std::string> &street,
+    const std::optional<std::string> &postalCode,
+    const std::optional<std::string> &l, const std::optional<std::string> &st,
+    const std::optional<std::string> &c) {
   std::string personDN = "cn=" + personName + "," + baseDN;
 
   console::e("Creating Person:");
@@ -414,9 +469,21 @@ bool OpenLDAPManager::createPerson(
 
   std::vector<LDAPMod> mods;
 
-  // Required attributes for inetOrgPerson
+  auto addAttr = [&](const char *attr, const std::optional<std::string> &val) {
+    if (!val.has_value()) {
+      return;
+    }
+    LDAPMod mod;
+    mod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    mod.mod_type = const_cast<char *>(attr);
+    mod.mod_vals.modv_strvals = new char *[2];
+    mod.mod_vals.modv_strvals[0] = const_cast<char *>(val->c_str());
+    mod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(mod);
+  };
+
   LDAPMod objectClassMod;
-  objectClassMod.mod_op = LDAP_MOD_ADD;
+  objectClassMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
   objectClassMod.mod_vals.modv_strvals = new char *[5];
   objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("top");
@@ -428,199 +495,31 @@ bool OpenLDAPManager::createPerson(
   mods.push_back(objectClassMod);
 
   LDAPMod cnMod;
-  cnMod.mod_op = LDAP_MOD_ADD;
+  cnMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   cnMod.mod_type = const_cast<char *>("cn");
   cnMod.mod_vals.modv_strvals = new char *[2];
   cnMod.mod_vals.modv_strvals[0] = const_cast<char *>(personName.c_str());
   cnMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(cnMod);
 
-  LDAPMod uidMod;
-  uidMod.mod_op = LDAP_MOD_ADD;
-  uidMod.mod_type = const_cast<char *>("uid");
-  uidMod.mod_vals.modv_strvals = new char *[2];
-  uidMod.mod_vals.modv_strvals[0] = const_cast<char *>(uid.c_str());
-  uidMod.mod_vals.modv_strvals[1] = nullptr;
-  mods.push_back(uidMod);
-
-  // Optional inetOrgPerson attributes
-  if (!givenName.empty()) {
-    LDAPMod givenNameMod;
-    givenNameMod.mod_op = LDAP_MOD_ADD;
-    givenNameMod.mod_type = const_cast<char *>("givenName");
-    givenNameMod.mod_vals.modv_strvals = new char *[2];
-    givenNameMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(givenName.c_str());
-    givenNameMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(givenNameMod);
-  }
-
-  if (!sn.empty()) {
-    LDAPMod snMod;
-    snMod.mod_op = LDAP_MOD_ADD;
-    snMod.mod_type = const_cast<char *>("sn");
-    snMod.mod_vals.modv_strvals = new char *[2];
-    snMod.mod_vals.modv_strvals[0] = const_cast<char *>(sn.c_str());
-    snMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(snMod);
-  }
-
-  if (!mail.empty()) {
-    LDAPMod mailMod;
-    mailMod.mod_op = LDAP_MOD_ADD;
-    mailMod.mod_type = const_cast<char *>("mail");
-    mailMod.mod_vals.modv_strvals = new char *[2];
-    mailMod.mod_vals.modv_strvals[0] = const_cast<char *>(mail.c_str());
-    mailMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(mailMod);
-  }
-
-  if (!displayName.empty()) {
-    LDAPMod displayNameMod;
-    displayNameMod.mod_op = LDAP_MOD_ADD;
-    displayNameMod.mod_type = const_cast<char *>("displayName");
-    displayNameMod.mod_vals.modv_strvals = new char *[2];
-    displayNameMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(displayName.c_str());
-    displayNameMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(displayNameMod);
-  }
-
-  if (!employeeNumber.empty()) {
-    LDAPMod employeeNumberMod;
-    employeeNumberMod.mod_op = LDAP_MOD_ADD;
-    employeeNumberMod.mod_type = const_cast<char *>("employeeNumber");
-    employeeNumberMod.mod_vals.modv_strvals = new char *[2];
-    employeeNumberMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(employeeNumber.c_str());
-    employeeNumberMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(employeeNumberMod);
-  }
-
-  if (!employeeType.empty()) {
-    LDAPMod employeeTypeMod;
-    employeeTypeMod.mod_op = LDAP_MOD_ADD;
-    employeeTypeMod.mod_type = const_cast<char *>("employeeType");
-    employeeTypeMod.mod_vals.modv_strvals = new char *[2];
-    employeeTypeMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(employeeType.c_str());
-    employeeTypeMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(employeeTypeMod);
-  }
-
-  if (!departmentNumber.empty()) {
-    LDAPMod departmentNumberMod;
-    departmentNumberMod.mod_op = LDAP_MOD_ADD;
-    departmentNumberMod.mod_type = const_cast<char *>("departmentNumber");
-    departmentNumberMod.mod_vals.modv_strvals = new char *[2];
-    departmentNumberMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(departmentNumber.c_str());
-    departmentNumberMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(departmentNumberMod);
-  }
-
-  if (!mobile.empty()) {
-    LDAPMod mobileMod;
-    mobileMod.mod_op = LDAP_MOD_ADD;
-    mobileMod.mod_type = const_cast<char *>("mobile");
-    mobileMod.mod_vals.modv_strvals = new char *[2];
-    mobileMod.mod_vals.modv_strvals[0] = const_cast<char *>(mobile.c_str());
-    mobileMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(mobileMod);
-  }
-
-  if (!homePhone.empty()) {
-    LDAPMod homePhoneMod;
-    homePhoneMod.mod_op = LDAP_MOD_ADD;
-    homePhoneMod.mod_type = const_cast<char *>("homePhone");
-    homePhoneMod.mod_vals.modv_strvals = new char *[2];
-    homePhoneMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(homePhone.c_str());
-    homePhoneMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(homePhoneMod);
-  }
-
-  if (!pager.empty()) {
-    LDAPMod pagerMod;
-    pagerMod.mod_op = LDAP_MOD_ADD;
-    pagerMod.mod_type = const_cast<char *>("pager");
-    pagerMod.mod_vals.modv_strvals = new char *[2];
-    pagerMod.mod_vals.modv_strvals[0] = const_cast<char *>(pager.c_str());
-    pagerMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(pagerMod);
-  }
-
-  if (!title.empty()) {
-    LDAPMod titleMod;
-    titleMod.mod_op = LDAP_MOD_ADD;
-    titleMod.mod_type = const_cast<char *>("title");
-    titleMod.mod_vals.modv_strvals = new char *[2];
-    titleMod.mod_vals.modv_strvals[0] = const_cast<char *>(title.c_str());
-    titleMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(titleMod);
-  }
-
-  if (!telephoneNumber.empty()) {
-    LDAPMod telephoneNumberMod;
-    telephoneNumberMod.mod_op = LDAP_MOD_ADD;
-    telephoneNumberMod.mod_type = const_cast<char *>("telephoneNumber");
-    telephoneNumberMod.mod_vals.modv_strvals = new char *[2];
-    telephoneNumberMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(telephoneNumber.c_str());
-    telephoneNumberMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(telephoneNumberMod);
-  }
-
-  if (!street.empty()) {
-    LDAPMod streetMod;
-    streetMod.mod_op = LDAP_MOD_ADD;
-    streetMod.mod_type = const_cast<char *>("street");
-    streetMod.mod_vals.modv_strvals = new char *[2];
-    streetMod.mod_vals.modv_strvals[0] = const_cast<char *>(street.c_str());
-    streetMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(streetMod);
-  }
-
-  if (!postalCode.empty()) {
-    LDAPMod postalCodeMod;
-    postalCodeMod.mod_op = LDAP_MOD_ADD;
-    postalCodeMod.mod_type = const_cast<char *>("postalCode");
-    postalCodeMod.mod_vals.modv_strvals = new char *[2];
-    postalCodeMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(postalCode.c_str());
-    postalCodeMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(postalCodeMod);
-  }
-
-  if (!l.empty()) {
-    LDAPMod lMod;
-    lMod.mod_op = LDAP_MOD_ADD;
-    lMod.mod_type = const_cast<char *>("l");
-    lMod.mod_vals.modv_strvals = new char *[2];
-    lMod.mod_vals.modv_strvals[0] = const_cast<char *>(l.c_str());
-    lMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(lMod);
-  }
-
-  if (!st.empty()) {
-    LDAPMod stMod;
-    stMod.mod_op = LDAP_MOD_ADD;
-    stMod.mod_type = const_cast<char *>("st");
-    stMod.mod_vals.modv_strvals = new char *[2];
-    stMod.mod_vals.modv_strvals[0] = const_cast<char *>(st.c_str());
-    stMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(stMod);
-  }
-
-  if (!c.empty()) {
-    LDAPMod cMod;
-    cMod.mod_op = LDAP_MOD_ADD;
-    cMod.mod_type = const_cast<char *>("c");
-    cMod.mod_vals.modv_strvals = new char *[2];
-    cMod.mod_vals.modv_strvals[0] = const_cast<char *>(c.c_str());
-    cMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(cMod);
-  }
+  addAttr("uid", uid);
+  addAttr("givenName", givenName);
+  addAttr("sn", sn);
+  addAttr("mail", mail);
+  addAttr("displayName", displayName);
+  addAttr("employeeNumber", employeeNumber);
+  addAttr("employeeType", employeeType);
+  addAttr("departmentNumber", departmentNumber);
+  addAttr("mobile", mobile);
+  addAttr("homePhone", homePhone);
+  addAttr("pager", pager);
+  addAttr("title", title);
+  addAttr("telephoneNumber", telephoneNumber);
+  addAttr("street", street);
+  addAttr("postalCode", postalCode);
+  addAttr("l", l);
+  addAttr("st", st);
+  addAttr("c", c);
 
   std::vector<LDAPMod *> modPtrs;
   for (auto &mod : mods) {
@@ -638,14 +537,23 @@ bool OpenLDAPManager::createPerson(
 
 bool OpenLDAPManager::updatePerson(
     const std::string &personName, const std::string &baseDN,
-    const std::string &uid, const std::string &givenName, const std::string &sn,
-    const std::string &mail, const std::string &displayName,
-    const std::string &employeeNumber, const std::string &employeeType,
-    const std::string &departmentNumber, const std::string &mobile,
-    const std::string &homePhone, const std::string &pager,
-    const std::string &title, const std::string &telephoneNumber,
-    const std::string &street, const std::string &postalCode,
-    const std::string &l, const std::string &st, const std::string &c) {
+    const std::optional<std::string> &uid,
+    const std::optional<std::string> &givenName,
+    const std::optional<std::string> &sn,
+    const std::optional<std::string> &mail,
+    const std::optional<std::string> &displayName,
+    const std::optional<std::string> &employeeNumber,
+    const std::optional<std::string> &employeeType,
+    const std::optional<std::string> &departmentNumber,
+    const std::optional<std::string> &mobile,
+    const std::optional<std::string> &homePhone,
+    const std::optional<std::string> &pager,
+    const std::optional<std::string> &title,
+    const std::optional<std::string> &telephoneNumber,
+    const std::optional<std::string> &street,
+    const std::optional<std::string> &postalCode,
+    const std::optional<std::string> &l, const std::optional<std::string> &st,
+    const std::optional<std::string> &c) {
   std::string personDN = "cn=" + personName + "," + baseDN;
 
   console::e("Updating Person:");
@@ -654,221 +562,41 @@ bool OpenLDAPManager::updatePerson(
 
   std::vector<LDAPMod> mods;
 
-  // Update uid if provided
-  if (!uid.empty()) {
-    LDAPMod uidMod;
-    uidMod.mod_op = LDAP_MOD_REPLACE;
-    uidMod.mod_type = const_cast<char *>("uid");
-    uidMod.mod_vals.modv_strvals = new char *[2];
-    uidMod.mod_vals.modv_strvals[0] = const_cast<char *>(uid.c_str());
-    uidMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(uidMod);
-  }
+  auto addReplace = [&](const char *attr, const std::optional<std::string> &val) {
+    if (!val.has_value()) {
+      return;
+    }
+    LDAPMod mod;
+    mod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    mod.mod_type = const_cast<char *>(attr);
+    mod.mod_vals.modv_strvals = new char *[2];
+    mod.mod_vals.modv_strvals[0] = const_cast<char *>(val->c_str());
+    mod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(mod);
+  };
 
-  // Update givenName if provided
-  if (!givenName.empty()) {
-    LDAPMod givenNameMod;
-    givenNameMod.mod_op = LDAP_MOD_REPLACE;
-    givenNameMod.mod_type = const_cast<char *>("givenName");
-    givenNameMod.mod_vals.modv_strvals = new char *[2];
-    givenNameMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(givenName.c_str());
-    givenNameMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(givenNameMod);
-  }
+  addReplace("uid", uid);
+  addReplace("givenName", givenName);
+  addReplace("sn", sn);
+  addReplace("mail", mail);
+  addReplace("displayName", displayName);
+  addReplace("employeeNumber", employeeNumber);
+  addReplace("employeeType", employeeType);
+  addReplace("departmentNumber", departmentNumber);
+  addReplace("mobile", mobile);
+  addReplace("homePhone", homePhone);
+  addReplace("pager", pager);
+  addReplace("title", title);
+  addReplace("telephoneNumber", telephoneNumber);
+  addReplace("street", street);
+  addReplace("postalCode", postalCode);
+  addReplace("l", l);
+  addReplace("st", st);
+  addReplace("c", c);
 
-  // Update sn if provided
-  if (!sn.empty()) {
-    LDAPMod snMod;
-    snMod.mod_op = LDAP_MOD_REPLACE;
-    snMod.mod_type = const_cast<char *>("sn");
-    snMod.mod_vals.modv_strvals = new char *[2];
-    snMod.mod_vals.modv_strvals[0] = const_cast<char *>(sn.c_str());
-    snMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(snMod);
-  }
-
-  // Update mail if provided
-  if (!mail.empty()) {
-    LDAPMod mailMod;
-    mailMod.mod_op = LDAP_MOD_REPLACE;
-    mailMod.mod_type = const_cast<char *>("mail");
-    mailMod.mod_vals.modv_strvals = new char *[2];
-    mailMod.mod_vals.modv_strvals[0] = const_cast<char *>(mail.c_str());
-    mailMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(mailMod);
-  }
-
-  // Update displayName if provided
-  if (!displayName.empty()) {
-    LDAPMod displayNameMod;
-    displayNameMod.mod_op = LDAP_MOD_REPLACE;
-    displayNameMod.mod_type = const_cast<char *>("displayName");
-    displayNameMod.mod_vals.modv_strvals = new char *[2];
-    displayNameMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(displayName.c_str());
-    displayNameMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(displayNameMod);
-  }
-
-  // Update employeeNumber if provided
-  if (!employeeNumber.empty()) {
-    LDAPMod employeeNumberMod;
-    employeeNumberMod.mod_op = LDAP_MOD_REPLACE;
-    employeeNumberMod.mod_type = const_cast<char *>("employeeNumber");
-    employeeNumberMod.mod_vals.modv_strvals = new char *[2];
-    employeeNumberMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(employeeNumber.c_str());
-    employeeNumberMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(employeeNumberMod);
-  }
-
-  // Update employeeType if provided
-  if (!employeeType.empty()) {
-    LDAPMod employeeTypeMod;
-    employeeTypeMod.mod_op = LDAP_MOD_REPLACE;
-    employeeTypeMod.mod_type = const_cast<char *>("employeeType");
-    employeeTypeMod.mod_vals.modv_strvals = new char *[2];
-    employeeTypeMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(employeeType.c_str());
-    employeeTypeMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(employeeTypeMod);
-  }
-
-  // Update departmentNumber if provided
-  if (!departmentNumber.empty()) {
-    LDAPMod departmentNumberMod;
-    departmentNumberMod.mod_op = LDAP_MOD_REPLACE;
-    departmentNumberMod.mod_type = const_cast<char *>("departmentNumber");
-    departmentNumberMod.mod_vals.modv_strvals = new char *[2];
-    departmentNumberMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(departmentNumber.c_str());
-    departmentNumberMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(departmentNumberMod);
-    departmentNumberMod.mod_vals.modv_bvals[0]->bv_len =
-        departmentNumber.length();
-    departmentNumberMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(departmentNumber.c_str());
-    departmentNumberMod.mod_vals.modv_bvals[1] = nullptr;
-    mods.push_back(departmentNumberMod);
-  }
-
-  // Update mobile if provided
-  if (!mobile.empty()) {
-    LDAPMod mobileMod;
-    mobileMod.mod_op = LDAP_MOD_REPLACE;
-    mobileMod.mod_type = const_cast<char *>("mobile");
-    mobileMod.mod_vals.modv_strvals = new char *[2];
-    mobileMod.mod_vals.modv_strvals[0] = const_cast<char *>(mobile.c_str());
-    mobileMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(mobileMod);
-  }
-
-  // Update homePhone if provided
-  if (!homePhone.empty()) {
-    LDAPMod homePhoneMod;
-    homePhoneMod.mod_op = LDAP_MOD_REPLACE;
-    homePhoneMod.mod_type = const_cast<char *>("homePhone");
-    homePhoneMod.mod_vals.modv_strvals = new char *[2];
-    homePhoneMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(homePhone.c_str());
-    homePhoneMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(homePhoneMod);
-  }
-
-  // Update pager if provided
-  if (!pager.empty()) {
-    LDAPMod pagerMod;
-    pagerMod.mod_op = LDAP_MOD_REPLACE;
-    pagerMod.mod_type = const_cast<char *>("pager");
-    pagerMod.mod_vals.modv_strvals = new char *[2];
-    pagerMod.mod_vals.modv_strvals[0] = const_cast<char *>(pager.c_str());
-    pagerMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(pagerMod);
-  }
-
-  // Update title if provided
-  if (!title.empty()) {
-    LDAPMod titleMod;
-    titleMod.mod_op = LDAP_MOD_REPLACE;
-    titleMod.mod_type = const_cast<char *>("title");
-    titleMod.mod_vals.modv_strvals = new char *[2];
-    titleMod.mod_vals.modv_strvals[0] = const_cast<char *>(title.c_str());
-    titleMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(titleMod);
-  }
-
-  // Update telephoneNumber if provided
-  if (!telephoneNumber.empty()) {
-    LDAPMod telephoneNumberMod;
-    telephoneNumberMod.mod_op = LDAP_MOD_REPLACE;
-    telephoneNumberMod.mod_type = const_cast<char *>("telephoneNumber");
-    telephoneNumberMod.mod_vals.modv_strvals = new char *[2];
-    telephoneNumberMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(telephoneNumber.c_str());
-    telephoneNumberMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(telephoneNumberMod);
-  }
-
-  // Update street if provided
-  if (!street.empty()) {
-    LDAPMod streetMod;
-    streetMod.mod_op = LDAP_MOD_REPLACE;
-    streetMod.mod_type = const_cast<char *>("street");
-    streetMod.mod_vals.modv_strvals = new char *[2];
-    streetMod.mod_vals.modv_strvals[0] = const_cast<char *>(street.c_str());
-    streetMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(streetMod);
-    streetMod.mod_vals.modv_bvals[0]->bv_len = street.length();
-    streetMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(street.c_str());
-    streetMod.mod_vals.modv_bvals[1] = nullptr;
-    mods.push_back(streetMod);
-  }
-
-  // Update postalCode if provided
-  if (!postalCode.empty()) {
-    LDAPMod postalCodeMod;
-    postalCodeMod.mod_op = LDAP_MOD_REPLACE;
-    postalCodeMod.mod_type = const_cast<char *>("postalCode");
-    postalCodeMod.mod_vals.modv_strvals = new char *[2];
-    postalCodeMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(postalCode.c_str());
-    postalCodeMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(postalCodeMod);
-  }
-
-  // Update l if provided
-  if (!l.empty()) {
-    LDAPMod lMod;
-    lMod.mod_op = LDAP_MOD_REPLACE;
-    lMod.mod_type = const_cast<char *>("l");
-    lMod.mod_vals.modv_strvals = new char *[2];
-    lMod.mod_vals.modv_strvals[0] = const_cast<char *>(l.c_str());
-    lMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(lMod);
-  }
-
-  // Update st if provided
-  if (!st.empty()) {
-    LDAPMod stMod;
-    stMod.mod_op = LDAP_MOD_REPLACE;
-    stMod.mod_type = const_cast<char *>("st");
-    stMod.mod_vals.modv_strvals = new char *[2];
-    stMod.mod_vals.modv_strvals[0] = const_cast<char *>(st.c_str());
-    stMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(stMod);
-  }
-
-  // Update c if provided
-  if (!c.empty()) {
-    LDAPMod cMod;
-    cMod.mod_op = LDAP_MOD_REPLACE;
-    cMod.mod_type = const_cast<char *>("c");
-    cMod.mod_vals.modv_strvals = new char *[2];
-    cMod.mod_vals.modv_strvals[0] = const_cast<char *>(c.c_str());
-    cMod.mod_vals.modv_strvals[1] = nullptr;
-    mods.push_back(cMod);
+  if (mods.empty()) {
+    console::e("Error: No attributes specified for update");
+    return false;
   }
 
   std::vector<LDAPMod *> modPtrs;
@@ -902,11 +630,13 @@ bool OpenLDAPManager::deletePerson(const std::string &personName,
   return true;
 }
 
-bool OpenLDAPManager::createOrganizationalUnit(const std::string &ouName,
-                                               const std::string &baseDN,
-                                               const std::string &password,
-                                               const std::string &fullname,
-                                               const std::string &email) {
+bool OpenLDAPManager::createOrganizationalUnit(
+    const std::string &ouName, const std::string &baseDN,
+    const std::optional<std::string> &telephoneNumber,
+    const std::optional<std::string> &street,
+    const std::optional<std::string> &postalCode,
+    const std::optional<std::string> &st, const std::optional<std::string> &l,
+    const std::optional<std::string> &description) {
   std::string ouDN = "ou=" + ouName + "," + baseDN;
 
   console::e("Creating Organizational Unit:");
@@ -916,60 +646,41 @@ bool OpenLDAPManager::createOrganizationalUnit(const std::string &ouName,
   std::vector<LDAPMod> mods;
 
   LDAPMod ouMod;
-  ouMod.mod_op = LDAP_MOD_ADD;
+  ouMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   ouMod.mod_type = const_cast<char *>("ou");
-  ouMod.mod_vals.modv_bvals = new struct berval *[2];
-  ouMod.mod_vals.modv_bvals[0] = new struct berval;
-  ouMod.mod_vals.modv_bvals[0]->bv_len = ouName.length();
-  ouMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>(ouName.c_str());
-  ouMod.mod_vals.modv_bvals[1] = nullptr;
+  ouMod.mod_vals.modv_strvals = new char *[2];
+  ouMod.mod_vals.modv_strvals[0] = const_cast<char *>(ouName.c_str());
+  ouMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(ouMod);
 
   LDAPMod objectClassMod;
-  objectClassMod.mod_op = LDAP_MOD_ADD;
+  objectClassMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
-  objectClassMod.mod_vals.modv_bvals = new struct berval *[2];
-  objectClassMod.mod_vals.modv_bvals[0] = new struct berval;
-  objectClassMod.mod_vals.modv_bvals[0]->bv_len = 18;
-  objectClassMod.mod_vals.modv_bvals[0]->bv_val =
+  objectClassMod.mod_vals.modv_strvals = new char *[2];
+  objectClassMod.mod_vals.modv_strvals[0] =
       const_cast<char *>("organizationalUnit");
-  objectClassMod.mod_vals.modv_bvals[1] = nullptr;
+  objectClassMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(objectClassMod);
 
-  if (!password.empty()) {
-    LDAPMod passwordMod;
-    passwordMod.mod_op = LDAP_MOD_ADD;
-    passwordMod.mod_type = const_cast<char *>("userPassword");
-    passwordMod.mod_vals.modv_bvals = new struct berval *[2];
-    passwordMod.mod_vals.modv_bvals[0] = new struct berval;
-    passwordMod.mod_vals.modv_bvals[0]->bv_len = password.length();
-    passwordMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(password.c_str());
-    passwordMod.mod_vals.modv_bvals[1] = nullptr;
-    mods.push_back(passwordMod);
-  }
-  if (!fullname.empty()) {
-    LDAPMod cnMod;
-    cnMod.mod_op = LDAP_MOD_ADD;
-    cnMod.mod_type = const_cast<char *>("cn");
-    cnMod.mod_vals.modv_bvals = new struct berval *[2];
-    cnMod.mod_vals.modv_bvals[0] = new struct berval;
-    cnMod.mod_vals.modv_bvals[0]->bv_len = fullname.length();
-    cnMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>(fullname.c_str());
-    cnMod.mod_vals.modv_bvals[1] = nullptr;
-    mods.push_back(cnMod);
-  }
-  if (!email.empty()) {
-    LDAPMod emailMod;
-    emailMod.mod_op = LDAP_MOD_ADD;
-    emailMod.mod_type = const_cast<char *>("mail");
-    emailMod.mod_vals.modv_bvals = new struct berval *[2];
-    emailMod.mod_vals.modv_bvals[0] = new struct berval;
-    emailMod.mod_vals.modv_bvals[0]->bv_len = email.length();
-    emailMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>(email.c_str());
-    emailMod.mod_vals.modv_bvals[1] = nullptr;
-    mods.push_back(emailMod);
-  }
+  auto addAttr = [&](const char *attr, const std::optional<std::string> &val) {
+    if (!val.has_value()) {
+      return;
+    }
+    LDAPMod mod;
+    mod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    mod.mod_type = const_cast<char *>(attr);
+    mod.mod_vals.modv_strvals = new char *[2];
+    mod.mod_vals.modv_strvals[0] = const_cast<char *>(val->c_str());
+    mod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(mod);
+  };
+
+  addAttr("telephoneNumber", telephoneNumber);
+  addAttr("street", street);
+  addAttr("postalCode", postalCode);
+  addAttr("st", st);
+  addAttr("l", l);
+  addAttr("description", description);
 
   std::vector<LDAPMod *> modPtrs;
   for (auto &mod : mods) {

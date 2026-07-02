@@ -24,6 +24,11 @@ public:
                  const std::string &recordName, const std::string &recordType,
                  const std::string &recordValue,
                  const std::optional<int> &ttl);
+  bool updateRecord(const std::string &zoneName, const std::string &baseDN,
+                    const std::string &recordName,
+                    const std::string &recordType,
+                    const std::optional<std::string> &recordValue,
+                    const std::optional<int> &ttl);
   bool deleteRecord(const std::string &zoneName, const std::string &baseDN,
                     const std::string &recordName,
                     const std::string &recordType);
@@ -39,6 +44,7 @@ private:
 
   std::string getZoneDN(const std::string &zoneName,
                         const std::string &baseDN) const;
+  std::string recordTypeToAttribute(const std::string &recordType) const;
   bool validateZoneName(const std::string &zoneName) const;
 };
 

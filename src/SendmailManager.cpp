@@ -31,16 +31,18 @@ bool SendmailManager::execute(int argc, char *argv[]) {
     static struct option long_options[] = {
         {"cluster", required_argument, 0, 'c'},
         {"host", required_argument, 0, 'h'},
+        {"description", required_argument, 0, 'd'},
         {0, 0, 0, 0}};
 
     std::string mtaName;
-    std::string cluster;
-    std::string host;
+    std::optional<std::string> cluster;
+    std::optional<std::string> host;
+    std::optional<std::string> description;
 
     int opt;
     int option_index = 0;
 
-    while ((opt = getopt_long(argc, argv, "c:h:", long_options,
+    while ((opt = getopt_long(argc, argv, "c:h:d:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
       case 'c':
@@ -49,21 +51,25 @@ bool SendmailManager::execute(int argc, char *argv[]) {
       case 'h':
         host = optarg;
         break;
+      case 'd':
+        description = optarg;
+        break;
       default:
-        console::e(
-            "Usage: ldapcli create-mta <mta-name> [-c cluster] [-h host]");
+        console::e("Usage: ldapcli create-mta <mta-name> [-c cluster] [-h host] "
+                   "[-d description]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-mta <mta-name> [-c cluster] [-h host]");
+      console::e("Usage: ldapcli create-mta <mta-name> [-c cluster] [-h host] "
+                 "[-d description]");
       return false;
     }
 
     mtaName = argv[optind];
 
-    return createMTA(mtaName, baseDN);
+    return createMTA(mtaName, baseDN, cluster, host, description);
   } else if (command == "delete-mta") {
     if (optind >= argc) {
       console::e("Usage: ldapcli delete-mta <mta-name>");
@@ -74,14 +80,48 @@ bool SendmailManager::execute(int argc, char *argv[]) {
 
     return deleteMTA(mtaName, baseDN);
   } else if (command == "update-mta") {
+    static struct option long_options[] = {
+        {"cluster", required_argument, 0, 'c'},
+        {"host", required_argument, 0, 'h'},
+        {"description", required_argument, 0, 'd'},
+        {0, 0, 0, 0}};
+
+    std::string mtaName;
+    std::optional<std::string> cluster;
+    std::optional<std::string> host;
+    std::optional<std::string> description;
+
+    int opt;
+    int option_index = 0;
+
+    while ((opt = getopt_long(argc, argv, "c:h:d:", long_options,
+                              &option_index)) != -1) {
+      switch (opt) {
+      case 'c':
+        cluster = optarg;
+        break;
+      case 'h':
+        host = optarg;
+        break;
+      case 'd':
+        description = optarg;
+        break;
+      default:
+        console::e("Usage: ldapcli update-mta <mta-name> [-c cluster] [-h host] "
+                   "[-d description]");
+        return false;
+      }
+    }
+
     if (optind >= argc) {
-      console::e("Usage: ldapcli update-mta <mta-name>");
+      console::e("Usage: ldapcli update-mta <mta-name> [-c cluster] [-h host] "
+                 "[-d description]");
       return false;
     }
 
-    std::string mtaName = argv[optind];
+    mtaName = argv[optind];
 
-    return updateMTA(mtaName, baseDN, argc, argv);
+    return updateMTA(mtaName, baseDN, cluster, host, description);
   } else if (command == "list-mtas") {
     return listMTAs(baseDN);
   } else {
@@ -108,7 +148,6 @@ bool SendmailManager::listMTAs(const std::string &baseDN) {
     return true;
   }
 
-  // Convert results to table format for display
   std::vector<std::string> flatData;
   flatData.reserve(results.size() * 2);
   for (const auto &entry : results) {
@@ -125,67 +164,66 @@ bool SendmailManager::listMTAs(const std::string &baseDN) {
   return true;
 }
 
-bool SendmailManager::createMTA(const std::string &mtaName,
-                                const std::string &baseDN) {
+bool SendmailManager::createMTA(
+    const std::string &mtaName, const std::string &baseDN,
+    const std::optional<std::string> &cluster,
+    const std::optional<std::string> &host,
+    const std::optional<std::string> &description) {
   std::string mtaDN = getMTADN(mtaName, baseDN);
 
   console::e("Creating Sendmail MTA:");
   console::e("  MTA Name: {}", mtaName);
   console::e("  MTA DN: {}", mtaDN);
 
-  // Create LDAP mods for sendmailMTA object class
   std::vector<LDAPMod> mods;
 
-  // Required attributes
   LDAPMod cnMod;
-  cnMod.mod_op = LDAP_MOD_ADD;
+  cnMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   cnMod.mod_type = const_cast<char *>("cn");
-  cnMod.mod_vals.modv_bvals = new struct berval *[2];
-  cnMod.mod_vals.modv_bvals[0] = new struct berval;
-  cnMod.mod_vals.modv_bvals[0]->bv_len = mtaName.length();
-  cnMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>(mtaName.c_str());
-  cnMod.mod_vals.modv_bvals[1] = nullptr;
+  cnMod.mod_vals.modv_strvals = new char *[2];
+  cnMod.mod_vals.modv_strvals[0] = const_cast<char *>(mtaName.c_str());
+  cnMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(cnMod);
 
   LDAPMod objectClassMod;
-  objectClassMod.mod_op = LDAP_MOD_ADD;
+  objectClassMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
-  objectClassMod.mod_vals.modv_bvals = new struct berval *[2];
-  objectClassMod.mod_vals.modv_bvals[0] = new struct berval;
-  objectClassMod.mod_vals.modv_bvals[0]->bv_len = 12;
-  objectClassMod.mod_vals.modv_bvals[0]->bv_val =
+  objectClassMod.mod_vals.modv_strvals = new char *[2];
+  objectClassMod.mod_vals.modv_strvals[0] =
       const_cast<char *>("sendmailMTA");
-  objectClassMod.mod_vals.modv_bvals[1] = nullptr;
+  objectClassMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(objectClassMod);
 
-  // Optional attributes
-  std::string cluster;
-  std::string host;
-  if (!cluster.empty()) {
+  if (cluster.has_value()) {
     LDAPMod clusterMod;
-    clusterMod.mod_op = LDAP_MOD_ADD;
+    clusterMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     clusterMod.mod_type = const_cast<char *>("sendmailMTACluster");
-    clusterMod.mod_vals.modv_bvals = new struct berval *[2];
-    clusterMod.mod_vals.modv_bvals[0] = new struct berval;
-    clusterMod.mod_vals.modv_bvals[0]->bv_len = cluster.length();
-    clusterMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(cluster.c_str());
-    clusterMod.mod_vals.modv_bvals[1] = nullptr;
+    clusterMod.mod_vals.modv_strvals = new char *[2];
+    clusterMod.mod_vals.modv_strvals[0] =
+        const_cast<char *>(cluster->c_str());
+    clusterMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(clusterMod);
   }
-  if (!host.empty()) {
+  if (host.has_value()) {
     LDAPMod hostMod;
-    hostMod.mod_op = LDAP_MOD_ADD;
+    hostMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     hostMod.mod_type = const_cast<char *>("sendmailMTAHost");
-    hostMod.mod_vals.modv_bvals = new struct berval *[2];
-    hostMod.mod_vals.modv_bvals[0] = new struct berval;
-    hostMod.mod_vals.modv_bvals[0]->bv_len = host.length();
-    hostMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>(host.c_str());
-    hostMod.mod_vals.modv_bvals[1] = nullptr;
+    hostMod.mod_vals.modv_strvals = new char *[2];
+    hostMod.mod_vals.modv_strvals[0] = const_cast<char *>(host->c_str());
+    hostMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(hostMod);
   }
+  if (description.has_value()) {
+    LDAPMod descriptionMod;
+    descriptionMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    descriptionMod.mod_type = const_cast<char *>("description");
+    descriptionMod.mod_vals.modv_strvals = new char *[2];
+    descriptionMod.mod_vals.modv_strvals[0] =
+        const_cast<char *>(description->c_str());
+    descriptionMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(descriptionMod);
+  }
 
-  // Convert mods to LDAPMod**
   std::vector<LDAPMod *> modPtrs;
   for (auto &mod : mods) {
     modPtrs.push_back(&mod);
@@ -201,92 +239,41 @@ bool SendmailManager::createMTA(const std::string &mtaName,
   return true;
 }
 
-bool SendmailManager::updateMTA(const std::string &mtaName,
-                                const std::string &baseDN, int argc,
-                                char *argv[]) {
+bool SendmailManager::updateMTA(
+    const std::string &mtaName, const std::string &baseDN,
+    const std::optional<std::string> &cluster,
+    const std::optional<std::string> &host,
+    const std::optional<std::string> &description) {
   std::string mtaDN = getMTADN(mtaName, baseDN);
 
   console::e("Updating Sendmail MTA:");
   console::e("  MTA Name: {}", mtaName);
   console::e("  MTA DN: {}", mtaDN);
 
-  static struct option long_options[] = {{"cluster", required_argument, 0, 'c'},
-                                         {"host", required_argument, 0, 'h'},
-                                         {0, 0, 0, 0}};
-
-  std::string cluster;
-  std::string host;
-
-  int opt;
-  int option_index = 0;
-
-  while ((opt = getopt_long(argc, argv, "c:h:", long_options, &option_index)) !=
-         -1) {
-    switch (opt) {
-    case 'c':
-      cluster = optarg;
-      break;
-    case 'h':
-      host = optarg;
-      break;
-    default:
-      console::e("Usage: ldapcli update-mta <mta-name> [-c cluster] [-h host]");
-      return false;
-    }
-  }
-
-  if (optind >= argc) {
-    console::e("Usage: ldapcli update-mta <mta-name> [-c cluster] [-h host]");
-    return false;
-  }
-
-  // Get current MTA data
-  std::vector<std::vector<std::pair<std::string, std::string>>> results;
-  std::string filter = "(cn=" + mtaName + ")";
-
-  if (!m_connection.search(mtaDN, LDAP_SCOPE_BASE, filter, results)) {
-    console::e("Error: {}", m_connection.getError());
-    return false;
-  }
-
-  if (results.empty()) {
-    console::e("Error: MTA not found");
-    return false;
-  }
-
-  // Create LDAP mods for updates
   std::vector<LDAPMod> mods;
 
-  if (!cluster.empty()) {
-    LDAPMod clusterMod;
-    clusterMod.mod_op = LDAP_MOD_REPLACE;
-    clusterMod.mod_type = const_cast<char *>("sendmailMTACluster");
-    clusterMod.mod_vals.modv_bvals = new struct berval *[2];
-    clusterMod.mod_vals.modv_bvals[0] = new struct berval;
-    clusterMod.mod_vals.modv_bvals[0]->bv_len = cluster.length();
-    clusterMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(cluster.c_str());
-    clusterMod.mod_vals.modv_bvals[1] = nullptr;
-    mods.push_back(clusterMod);
-  }
-  if (!host.empty()) {
-    LDAPMod hostMod;
-    hostMod.mod_op = LDAP_MOD_REPLACE;
-    hostMod.mod_type = const_cast<char *>("sendmailMTAHost");
-    hostMod.mod_vals.modv_bvals = new struct berval *[2];
-    hostMod.mod_vals.modv_bvals[0] = new struct berval;
-    hostMod.mod_vals.modv_bvals[0]->bv_len = host.length();
-    hostMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>(host.c_str());
-    hostMod.mod_vals.modv_bvals[1] = nullptr;
-    mods.push_back(hostMod);
-  }
+  auto addReplace = [&](const char *attr, const std::optional<std::string> &val) {
+    if (!val.has_value()) {
+      return;
+    }
+    LDAPMod mod;
+    mod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    mod.mod_type = const_cast<char *>(attr);
+    mod.mod_vals.modv_strvals = new char *[2];
+    mod.mod_vals.modv_strvals[0] = const_cast<char *>(val->c_str());
+    mod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(mod);
+  };
+
+  addReplace("sendmailMTACluster", cluster);
+  addReplace("sendmailMTAHost", host);
+  addReplace("description", description);
 
   if (mods.empty()) {
     console::e("Error: No attributes specified for update");
     return false;
   }
 
-  // Convert mods to LDAPMod**
   std::vector<LDAPMod *> modPtrs;
   for (auto &mod : mods) {
     modPtrs.push_back(&mod);

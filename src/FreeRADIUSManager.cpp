@@ -585,6 +585,70 @@ bool FreeRADIUSManager::createUser(const std::string &username,
   return true;
 }
 
+bool FreeRADIUSManager::updateUser(const std::string &username,
+                                   const std::string &baseDN,
+                                   const std::optional<std::string> &password,
+                                   const std::optional<std::string> &serviceType,
+                                   const std::optional<std::string> &framedProtocol) {
+  std::string userDN = getUserDN(username, baseDN);
+
+  console::e("Updating FreeRADIUS user:");
+  console::e("  Username: {}", username);
+  console::e("  User DN: {}", userDN);
+
+  std::vector<LDAPMod> mods;
+
+  if (password.has_value()) {
+    LDAPMod passwordMod;
+    passwordMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    passwordMod.mod_type = const_cast<char *>("userPassword");
+    passwordMod.mod_vals.modv_strvals = new char *[2];
+    passwordMod.mod_vals.modv_strvals[0] =
+        const_cast<char *>(password->c_str());
+    passwordMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(passwordMod);
+  }
+  if (serviceType.has_value()) {
+    LDAPMod serviceTypeMod;
+    serviceTypeMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    serviceTypeMod.mod_type = const_cast<char *>("radiusServiceType");
+    serviceTypeMod.mod_vals.modv_strvals = new char *[2];
+    serviceTypeMod.mod_vals.modv_strvals[0] =
+        const_cast<char *>(serviceType->c_str());
+    serviceTypeMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(serviceTypeMod);
+  }
+  if (framedProtocol.has_value()) {
+    LDAPMod framedProtocolMod;
+    framedProtocolMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    framedProtocolMod.mod_type = const_cast<char *>("radiusFramedProtocol");
+    framedProtocolMod.mod_vals.modv_strvals = new char *[2];
+    framedProtocolMod.mod_vals.modv_strvals[0] =
+        const_cast<char *>(framedProtocol->c_str());
+    framedProtocolMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(framedProtocolMod);
+  }
+
+  if (mods.empty()) {
+    console::e("No attributes to update.");
+    return false;
+  }
+
+  std::vector<LDAPMod *> modPtrs;
+  for (auto &mod : mods) {
+    modPtrs.push_back(&mod);
+  }
+  modPtrs.push_back(nullptr);
+
+  if (!m_connection.modifyEntry(userDN, modPtrs.data())) {
+    console::e("Error: {}", m_connection.getError());
+    return false;
+  }
+
+  console::e("User updated successfully!");
+  return true;
+}
+
 bool FreeRADIUSManager::deleteUser(const std::string &username,
                                    const std::string &baseDN) {
   std::string userDN = getUserDN(username, baseDN);
