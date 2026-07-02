@@ -1,6 +1,7 @@
 #include "KerberosManager.hpp"
 #include "Config.hpp"
 #include "Console.hpp"
+#include <getopt.h>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -10,10 +11,10 @@ KerberosManager::KerberosManager(LDAPConnection &connection)
 
 void KerberosManager::printUsage() const {
   console::e("Kerberos Commands:");
-  console::e("  create-principal <principal> [base-dn]");
-  console::e("  delete-principal <principal> [base-dn]");
-  console::e("  update-principal <principal> [base-dn]");
-  console::e("  list-principals [base-dn]");
+  console::e("  create-principal <principal> [options]");
+  console::e("  delete-principal <principal> [--principal PRINCIPAL]");
+  console::e("  update-principal <principal> [options]");
+  console::e("  list-principals");
 }
 
 std::string KerberosManager::getServiceName() const { return "kerberos"; }
@@ -59,6 +60,7 @@ bool KerberosManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "p:f:e:c:t:x:X:F:l:r:P:S:L:C:a:d:i:",
                               long_options, &option_index)) != -1) {
       switch (opt) {
@@ -160,12 +162,33 @@ bool KerberosManager::execute(int argc, char *argv[]) {
         optStr(principalAliases), optStr(allowedToDelegateTo),
         optStr(principalAuthInd));
   } else if (command == "delete-principal") {
-    if (optind >= argc) {
-      console::e("Usage: ldapcli delete-principal <principal>");
-      return false;
+    static struct option long_options[] = {
+        {"principal", required_argument, 0, 'p'}, {nullptr, 0, 0, 0}};
+
+    std::string principal;
+    int opt;
+    int option_index = 0;
+
+    optind = 3;
+    while ((opt = getopt_long(argc, argv, "p:", long_options, &option_index)) !=
+           -1) {
+      if (opt == 'p') {
+        principal = optarg;
+      } else {
+        console::e("Usage: ldapcli kerberos delete-principal <principal> "
+                   "[--principal PRINCIPAL]");
+        return false;
+      }
     }
 
-    std::string principal = argv[optind];
+    if (principal.empty() && optind < argc) {
+      principal = argv[optind];
+    }
+    if (principal.empty()) {
+      console::e("Usage: ldapcli kerberos delete-principal <principal> "
+                 "[--principal PRINCIPAL]");
+      return false;
+    }
 
     return deletePrincipal(principal, baseDN);
   } else if (command == "update-principal") {
@@ -197,6 +220,7 @@ bool KerberosManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "c:t:x:X:F:l:r:P:S:L:C:a:d:i:",
                               long_options, &option_index)) != -1) {
       switch (opt) {

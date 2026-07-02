@@ -12,14 +12,29 @@ PowerDNSManager::PowerDNSManager(LDAPConnection &connection)
 
 void PowerDNSManager::printUsage() const {
   console::e("DNS Commands:");
-  console::e("  create-zone <zone-name> [type] [base-dn]");
-  console::e("  delete-zone <zone-name> [base-dn]");
-  console::e("  update-zone <zone-name> [base-dn]");
-  console::e("  list-zones [base-dn]");
-  console::e("  add-record <zone> <name> <type> <value> [ttl]");
-  console::e("  update-record <zone> <name> <type> <value> [-t ttl]");
-  console::e("  delete-record <zone> <name> <type>");
-  console::e("  list-records <zone> [base-dn]");
+  console::e("  create-zone <zone> [--type|--t TYPE]");
+  console::e("  delete-zone <zone> [--zone ZONE]");
+  console::e(
+      "  update-zone <zone> [--notified-serial|--n N] [--last-check|--l N] "
+      "[--master|--m HOST]");
+  console::e("  list-zones");
+  console::e(
+      "  add-record [--zone|--z ZONE] [--name|--n NAME] [--ttl|--t SEC] "
+      "(--type|--y TYPE --value|--v VALUE | --a ADDR | --aaaa ADDR | ...)");
+  console::e(
+      "  update-record [--zone|--z ZONE] [--name|--n NAME] "
+      "[--type|--y TYPE] [--value|--v VALUE | --a ADDR | ...] [--ttl|--t SEC]");
+  console::e(
+      "  delete-record [--zone|--z ZONE] [--name|--n NAME] [--type|--y TYPE]");
+  console::e("  list-records [--zone|--z ZONE]");
+  printRecordTypeOptions();
+}
+
+void PowerDNSManager::printRecordTypeOptions() const {
+  console::e("Record type long options (each sets type and value):");
+#define POWERDNS_RECORD_OPTION(name, type)                                     \
+  console::e("  --{} <value>  ({} record)", name, type);
+#include "PowerDNSRecordOptions.inc"
 }
 
 std::string PowerDNSManager::getServiceName() const { return "dns"; }
@@ -60,6 +75,145 @@ PowerDNSManager::recordTypeToAttribute(const std::string &recordType) const {
   return upper + "Record";
 }
 
+namespace {
+
+const std::unordered_map<std::string, std::string> &recordTypeLongOptions() {
+  static const std::unordered_map<std::string, std::string> opts = {
+#define POWERDNS_RECORD_OPTION(name, type) {name, type},
+#include "PowerDNSRecordOptions.inc"
+#undef POWERDNS_RECORD_OPTION
+  };
+  return opts;
+}
+
+struct option *recordLongOptions() {
+  static struct option options[] = {{"zone", required_argument, 0, 'z'},
+                                    {"name", required_argument, 0, 'n'},
+                                    {"ttl", required_argument, 0, 't'},
+                                    {"value", required_argument, 0, 'v'},
+                                    {"type", required_argument, 0, 'y'},
+#define POWERDNS_RECORD_OPTION(name, type) {name, required_argument, 0, 0},
+#include "PowerDNSRecordOptions.inc"
+#undef POWERDNS_RECORD_OPTION
+                                    {nullptr, 0, 0, 0}};
+  return options;
+}
+
+struct RecordArgs {
+  std::string zone;
+  std::string name;
+  std::string type;
+  std::optional<std::string> value;
+  std::optional<int> ttl;
+};
+
+bool setRecordType(RecordArgs &args, const std::string &type,
+                   const std::string &val) {
+  if (!args.type.empty() && args.type != type) {
+    console::e("Error: multiple record types specified");
+    return false;
+  }
+  args.type = type;
+  args.value = val;
+  return true;
+}
+
+bool handleRecordOpt(int opt, int option_index, struct option *long_options,
+                     RecordArgs &args) {
+  switch (opt) {
+  case 'z':
+    args.zone = optarg;
+    return true;
+  case 'n':
+    args.name = optarg;
+    return true;
+  case 't':
+    args.ttl = std::atoi(optarg);
+    return true;
+  case 'v':
+    args.value = optarg;
+    return true;
+  case 'y':
+    args.type = optarg;
+    return true;
+  case 0: {
+    const char *optName = long_options[option_index].name;
+    auto it = recordTypeLongOptions().find(optName);
+    if (it == recordTypeLongOptions().end()) {
+      return false;
+    }
+    return setRecordType(args, it->second, optarg);
+  }
+  default:
+    return false;
+  }
+}
+
+bool parseRecordArgs(int argc, char *argv[], RecordArgs &args,
+                     bool requireValue) {
+  optind = 3;
+  int opt;
+  int option_index = 0;
+  struct option *long_options = recordLongOptions();
+
+  while ((opt = getopt_long(argc, argv, "z:n:t:v:y:", long_options,
+                            &option_index)) != -1) {
+    if (!handleRecordOpt(opt, option_index, long_options, args)) {
+      return false;
+    }
+  }
+
+  if (args.zone.empty() && optind < argc) {
+    args.zone = argv[optind++];
+  }
+  if (args.name.empty() && optind < argc) {
+    args.name = argv[optind++];
+  }
+  if (args.type.empty() && optind < argc) {
+    args.type = argv[optind++];
+  }
+  if (!args.value.has_value() && optind < argc) {
+    args.value = argv[optind++];
+  }
+
+  if (args.zone.empty() || args.name.empty() || args.type.empty()) {
+    console::e("Error: zone, name, and record type are required");
+    return false;
+  }
+  if (requireValue && !args.value.has_value()) {
+    console::e("Error: record value is required");
+    return false;
+  }
+  return true;
+}
+
+std::string parseZoneArg(int argc, char *argv[], const char *usage) {
+  optind = 3;
+  static struct option long_options[] = {{"zone", required_argument, 0, 'z'},
+                                         {nullptr, 0, 0, 0}};
+  std::string zone;
+  int opt;
+  int option_index = 0;
+  while ((opt = getopt_long(argc, argv, "z:", long_options, &option_index)) !=
+         -1) {
+    if (opt == 'z') {
+      zone = optarg;
+    } else {
+      console::e("{}", usage);
+      return "";
+    }
+  }
+  if (zone.empty() && optind < argc) {
+    zone = argv[optind];
+  }
+  if (zone.empty()) {
+    console::e("{}", usage);
+  }
+  return zone;
+}
+
+} // namespace
+
 bool PowerDNSManager::execute(int argc, char *argv[]) {
   if (argc < 3) {
     printUsage();
@@ -70,46 +224,53 @@ bool PowerDNSManager::execute(int argc, char *argv[]) {
   std::string baseDN = Config::getInstance().getBaseDN();
 
   if (command == "create-zone") {
-    static struct option long_options[] = {{"type", required_argument, 0, 't'},
+    static struct option long_options[] = {{"zone", required_argument, 0, 'z'},
+                                           {"type", required_argument, 0, 't'},
                                            {0, 0, 0, 0}};
 
     std::string zoneName;
     std::optional<std::string> type = std::string("master");
 
+    optind = 3;
     int opt;
     int option_index = 0;
 
-    while ((opt = getopt_long(argc, argv, "t:", long_options, &option_index)) !=
-           -1) {
+    while ((opt = getopt_long(argc, argv, "z:t:", long_options,
+                              &option_index)) != -1) {
       switch (opt) {
+      case 'z':
+        zoneName = optarg;
+        break;
       case 't':
         type = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-zone <zone-name> [-t type]");
+        console::e("Usage: ldapcli dns create-zone <zone> [--zone ZONE] "
+                   "[--type|--t TYPE]");
         return false;
       }
     }
 
-    if (optind >= argc) {
-      console::e("Usage: ldapcli create-zone <zone-name> [-t type]");
+    if (zoneName.empty() && optind < argc) {
+      zoneName = argv[optind];
+    }
+    if (zoneName.empty()) {
+      console::e("Usage: ldapcli dns create-zone <zone> [--zone ZONE] "
+                 "[--type|--t TYPE]");
       return false;
     }
-
-    zoneName = argv[optind];
 
     return createZone(zoneName, baseDN, type);
   } else if (command == "delete-zone") {
-    if (optind >= argc) {
-      console::e("Usage: ldapcli delete-zone <zone-name>");
+    std::string zoneName = parseZoneArg(
+        argc, argv, "Usage: ldapcli dns delete-zone <zone> [--zone|--z ZONE]");
+    if (zoneName.empty()) {
       return false;
     }
-
-    std::string zoneName = argv[optind];
-
     return deleteZone(zoneName, baseDN);
   } else if (command == "update-zone") {
     static struct option long_options[] = {
+        {"zone", required_argument, 0, 'z'},
         {"notified-serial", required_argument, 0, 'n'},
         {"last-check", required_argument, 0, 'l'},
         {"master", required_argument, 0, 'm'},
@@ -120,12 +281,16 @@ bool PowerDNSManager::execute(int argc, char *argv[]) {
     std::optional<std::string> lastCheck;
     std::optional<std::string> master;
 
+    optind = 3;
     int opt;
     int option_index = 0;
 
-    while ((opt = getopt_long(argc, argv, "n:l:m:", long_options,
+    while ((opt = getopt_long(argc, argv, "z:n:l:m:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
+      case 'z':
+        zoneName = optarg;
+        break;
       case 'n':
         notifiedSerial = optarg;
         break;
@@ -136,119 +301,101 @@ bool PowerDNSManager::execute(int argc, char *argv[]) {
         master = optarg;
         break;
       default:
-        console::e("Usage: ldapcli update-zone <zone-name> [-n serial] [-l "
-                   "last-check] [-m master]");
+        console::e("Usage: ldapcli dns update-zone <zone> [--zone ZONE] "
+                   "[--notified-serial|--n N] [--last-check|--l N] "
+                   "[--master|--m HOST]");
         return false;
       }
     }
 
-    if (optind >= argc) {
-      console::e("Usage: ldapcli update-zone <zone-name> [-n serial] [-l "
-                 "last-check] [-m master]");
+    if (zoneName.empty() && optind < argc) {
+      zoneName = argv[optind];
+    }
+    if (zoneName.empty()) {
+      console::e("Usage: ldapcli dns update-zone <zone> [--zone ZONE] "
+                 "[--notified-serial|--n N] [--last-check|--l N] "
+                 "[--master|--m HOST]");
       return false;
     }
-
-    zoneName = argv[optind];
 
     return updateZone(zoneName, baseDN, notifiedSerial, lastCheck, master);
   } else if (command == "list-zones") {
     return listZones(baseDN);
   } else if (command == "add-record") {
-    static struct option long_options[] = {{"ttl", required_argument, 0, 't'},
-                                           {0, 0, 0, 0}};
-
-    std::string zone;
-    std::string name;
-    std::string type;
-    std::string value;
-    std::optional<int> ttl = 3600;
-
-    int opt;
-    int option_index = 0;
-
-    while ((opt = getopt_long(argc, argv, "t:", long_options, &option_index)) !=
-           -1) {
-      switch (opt) {
-      case 't':
-        ttl = std::atoi(optarg);
-        break;
-      default:
-        console::e(
-            "Usage: ldapcli add-record <zone> <name> <type> <value> [-t ttl]");
-        return false;
-      }
-    }
-
-    if (optind + 3 >= argc) {
-      console::e(
-          "Usage: ldapcli add-record <zone> <name> <type> <value> [-t ttl]");
+    RecordArgs args;
+    args.ttl = 3600;
+    if (!parseRecordArgs(argc, argv, args, true)) {
+      console::e("Usage: ldapcli dns add-record [--zone|--z ZONE] "
+                 "[--name|--n NAME] [--ttl|--t SEC] "
+                 "(--type|--y TYPE --value|--v VALUE | --a ADDR | ...)");
       return false;
     }
-
-    zone = argv[optind];
-    name = argv[optind + 1];
-    type = argv[optind + 2];
-    value = argv[optind + 3];
-
-    return addRecord(zone, baseDN, name, type, value, ttl);
+    return addRecord(args.zone, baseDN, args.name, args.type, *args.value,
+                     args.ttl);
   } else if (command == "update-record") {
-    static struct option long_options[] = {{"ttl", required_argument, 0, 't'},
+    RecordArgs args;
+    if (!parseRecordArgs(argc, argv, args, false)) {
+      console::e("Usage: ldapcli dns update-record [--zone|--z ZONE] "
+                 "[--name|--n NAME] [--type|--y TYPE] "
+                 "[--value|--v VALUE | --a ADDR | ...] [--ttl|--t SEC]");
+      return false;
+    }
+    if (!args.value.has_value() && !args.ttl.has_value()) {
+      console::e("Error: specify --value or a record type option and/or --ttl");
+      return false;
+    }
+    return updateRecord(args.zone, baseDN, args.name, args.type, args.value,
+                        args.ttl);
+  } else if (command == "delete-record") {
+    optind = 3;
+    static struct option long_options[] = {{"zone", required_argument, 0, 'z'},
+                                           {"name", required_argument, 0, 'n'},
+                                           {"type", required_argument, 0, 'y'},
                                            {0, 0, 0, 0}};
-
     std::string zone;
     std::string name;
     std::string type;
-    std::string value;
-    std::optional<int> ttl;
-
     int opt;
     int option_index = 0;
-
-    while ((opt = getopt_long(argc, argv, "t:", long_options, &option_index)) !=
-           -1) {
+    while ((opt = getopt_long(argc, argv, "z:n:y:", long_options,
+                              &option_index)) != -1) {
       switch (opt) {
-      case 't':
-        ttl = std::atoi(optarg);
+      case 'z':
+        zone = optarg;
+        break;
+      case 'n':
+        name = optarg;
+        break;
+      case 'y':
+        type = optarg;
         break;
       default:
-        console::e("Usage: ldapcli update-record <zone> <name> <type> <value> "
-                   "[-t ttl]");
+        console::e("Usage: ldapcli dns delete-record [--zone|--z ZONE] "
+                   "[--name|--n NAME] [--type|--y TYPE]");
         return false;
       }
     }
-
-    if (optind + 3 >= argc) {
-      console::e("Usage: ldapcli update-record <zone> <name> <type> <value> "
-                 "[-t ttl]");
+    if (zone.empty() && optind < argc) {
+      zone = argv[optind++];
+    }
+    if (name.empty() && optind < argc) {
+      name = argv[optind++];
+    }
+    if (type.empty() && optind < argc) {
+      type = argv[optind++];
+    }
+    if (zone.empty() || name.empty() || type.empty()) {
+      console::e("Usage: ldapcli dns delete-record [--zone|--z ZONE] "
+                 "[--name|--n NAME] [--type|--y TYPE]");
       return false;
     }
-
-    zone = argv[optind];
-    name = argv[optind + 1];
-    type = argv[optind + 2];
-    value = argv[optind + 3];
-
-    return updateRecord(zone, baseDN, name, type,
-                        std::optional<std::string>(value), ttl);
-  } else if (command == "delete-record") {
-    if (optind + 2 >= argc) {
-      console::e("Usage: ldapcli delete-record <zone> <name> <type>");
-      return false;
-    }
-
-    std::string zone = argv[optind];
-    std::string name = argv[optind + 1];
-    std::string type = argv[optind + 2];
-
     return deleteRecord(zone, baseDN, name, type);
   } else if (command == "list-records") {
-    if (optind >= argc) {
-      console::e("Usage: ldapcli list-records <zone>");
+    std::string zone = parseZoneArg(
+        argc, argv, "Usage: ldapcli dns list-records <zone> [--zone|--z ZONE]");
+    if (zone.empty()) {
       return false;
     }
-
-    std::string zone = argv[optind];
-
     return listRecords(zone, baseDN);
   } else {
     console::e("Unknown DNS command: {}", command);

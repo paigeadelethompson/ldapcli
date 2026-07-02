@@ -10,10 +10,12 @@ SendmailManager::SendmailManager(LDAPConnection &connection)
 
 void SendmailManager::printUsage() const {
   console::e("Sendmail Commands:");
-  console::e("  create-mta <mta> [base-dn]");
-  console::e("  delete-mta <mta> [base-dn]");
-  console::e("  update-mta <mta> [base-dn]");
-  console::e("  list-mtas [base-dn]");
+  console::e("  create-mta <mta> [-c|--cluster NAME] [-h|--host HOST] "
+             "[-d|--description TEXT]");
+  console::e("  delete-mta <mta> [--mta MTA]");
+  console::e("  update-mta <mta> [-c|--cluster NAME] [-h|--host HOST] "
+             "[-d|--description TEXT]");
+  console::e("  list-mtas");
 }
 
 std::string SendmailManager::getServiceName() const { return "sendmail"; }
@@ -42,6 +44,7 @@ bool SendmailManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "c:h:d:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
@@ -56,15 +59,16 @@ bool SendmailManager::execute(int argc, char *argv[]) {
         break;
       default:
         console::e(
-            "Usage: ldapcli create-mta <mta-name> [-c cluster] [-h host] "
-            "[-d description]");
+            "Usage: ldapcli sendmail create-mta <mta> "
+            "[-c|--cluster NAME] [-h|--host HOST] [-d|--description TEXT]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-mta <mta-name> [-c cluster] [-h host] "
-                 "[-d description]");
+      console::e(
+          "Usage: ldapcli sendmail create-mta <mta> "
+          "[-c|--cluster NAME] [-h|--host HOST] [-d|--description TEXT]");
       return false;
     }
 
@@ -72,12 +76,31 @@ bool SendmailManager::execute(int argc, char *argv[]) {
 
     return createMTA(mtaName, baseDN, cluster, host, description);
   } else if (command == "delete-mta") {
-    if (optind >= argc) {
-      console::e("Usage: ldapcli delete-mta <mta-name>");
-      return false;
+    static struct option long_options[] = {{"mta", required_argument, 0, 'm'},
+                                           {nullptr, 0, 0, 0}};
+
+    std::string mtaName;
+    int opt;
+    int option_index = 0;
+
+    optind = 3;
+    while ((opt = getopt_long(argc, argv, "m:", long_options, &option_index)) !=
+           -1) {
+      if (opt == 'm') {
+        mtaName = optarg;
+      } else {
+        console::e("Usage: ldapcli sendmail delete-mta <mta> [--mta MTA]");
+        return false;
+      }
     }
 
-    std::string mtaName = argv[optind];
+    if (mtaName.empty() && optind < argc) {
+      mtaName = argv[optind];
+    }
+    if (mtaName.empty()) {
+      console::e("Usage: ldapcli sendmail delete-mta <mta> [--mta MTA]");
+      return false;
+    }
 
     return deleteMTA(mtaName, baseDN);
   } else if (command == "update-mta") {
@@ -95,6 +118,7 @@ bool SendmailManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "c:h:d:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
@@ -109,15 +133,16 @@ bool SendmailManager::execute(int argc, char *argv[]) {
         break;
       default:
         console::e(
-            "Usage: ldapcli update-mta <mta-name> [-c cluster] [-h host] "
-            "[-d description]");
+            "Usage: ldapcli sendmail update-mta <mta> "
+            "[-c|--cluster NAME] [-h|--host HOST] [-d|--description TEXT]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli update-mta <mta-name> [-c cluster] [-h host] "
-                 "[-d description]");
+      console::e(
+          "Usage: ldapcli sendmail update-mta <mta> "
+          "[-c|--cluster NAME] [-h|--host HOST] [-d|--description TEXT]");
       return false;
     }
 

@@ -1,6 +1,7 @@
 #include "FreeRADIUSManager.hpp"
 #include "Config.hpp"
 #include "Console.hpp"
+#include <getopt.h>
 #include <iostream>
 #include <sstream>
 
@@ -9,14 +10,23 @@ FreeRADIUSManager::FreeRADIUSManager(LDAPConnection &connection)
 
 void FreeRADIUSManager::printUsage() const {
   console::e("FreeRADIUS Commands:");
-  console::e("  create-client <client> [base-dn]");
-  console::e("  update-client <client> [base-dn]");
-  console::e("  delete-client <client> [base-dn]");
-  console::e("  list-clients [base-dn]");
-  console::e("  create-user <username> [base-dn]");
-  console::e("  update-user <username> [base-dn]");
-  console::e("  delete-user <username> [base-dn]");
-  console::e("  list-users [base-dn]");
+  console::e(
+      "  create-client <client> [-s|--secret SECRET] [-n|--shortname NAME] "
+      "[-t|--type TYPE]");
+  console::e(
+      "  update-client <client> [-s|--secret SECRET] [-n|--shortname NAME] "
+      "[-v|--virtual-server SERVER] [-t|--type TYPE] "
+      "[-m|--require-ma BOOL] [-c|--comment TEXT]");
+  console::e("  delete-client <client> [--client CLIENT]");
+  console::e("  list-clients");
+  console::e(
+      "  create-user <username> [-p|--password PASS] [-s|--service-type TYPE] "
+      "[-f|--framed-protocol PROTO]");
+  console::e(
+      "  update-user <username> [-p|--password PASS] [-s|--service-type TYPE] "
+      "[-f|--framed-protocol PROTO]");
+  console::e("  delete-user <username> [--user USER]");
+  console::e("  list-users");
 }
 
 std::string FreeRADIUSManager::getServiceName() const { return "freeradius"; }
@@ -45,6 +55,7 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "s:n:t:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
@@ -58,15 +69,16 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
         type = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-client <client-name> [-s secret] [-n "
-                   "shortname] [-t type]");
+        console::e(
+            "Usage: ldapcli freeradius create-client <client> "
+            "[-s|--secret SECRET] [-n|--shortname NAME] [-t|--type TYPE]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-client <client-name> [-s secret] [-n "
-                 "shortname] [-t type]");
+      console::e("Usage: ldapcli freeradius create-client <client> "
+                 "[-s|--secret SECRET] [-n|--shortname NAME] [-t|--type TYPE]");
       return false;
     }
 
@@ -75,12 +87,33 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
     return createClient(clientName, baseDN, secret, shortname, std::nullopt,
                         type, std::nullopt, std::nullopt);
   } else if (command == "delete-client") {
-    if (optind >= argc) {
-      console::e("Usage: ldapcli delete-client <client-name>");
-      return false;
+    static struct option long_options[] = {
+        {"client", required_argument, 0, 'c'}, {nullptr, 0, 0, 0}};
+
+    std::string clientName;
+    int opt;
+    int option_index = 0;
+
+    optind = 3;
+    while ((opt = getopt_long(argc, argv, "c:", long_options, &option_index)) !=
+           -1) {
+      if (opt == 'c') {
+        clientName = optarg;
+      } else {
+        console::e("Usage: ldapcli freeradius delete-client <client> "
+                   "[--client CLIENT]");
+        return false;
+      }
     }
 
-    std::string clientName = argv[optind];
+    if (clientName.empty() && optind < argc) {
+      clientName = argv[optind];
+    }
+    if (clientName.empty()) {
+      console::e("Usage: ldapcli freeradius delete-client <client> "
+                 "[--client CLIENT]");
+      return false;
+    }
 
     return deleteClient(clientName, baseDN);
   } else if (command == "update-client") {
@@ -104,6 +137,7 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "s:n:v:t:m:c:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
@@ -126,18 +160,19 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
         comment = optarg;
         break;
       default:
-        console::e(
-            "Usage: ldapcli update-client <client-name> [-s secret] "
-            "[-n shortname] [-v virtual-server] [-t type] [-m require-ma] "
-            "[-c comment]");
+        console::e("Usage: ldapcli freeradius update-client <client> "
+                   "[-s|--secret SECRET] [-n|--shortname NAME] "
+                   "[-v|--virtual-server SERVER] [-t|--type TYPE] "
+                   "[-m|--require-ma BOOL] [-c|--comment TEXT]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli update-client <client-name> [-s secret] [-n "
-                 "shortname] [-v virtual-server] [-t type] [-m require-ma] [-c "
-                 "comment]");
+      console::e("Usage: ldapcli freeradius update-client <client> "
+                 "[-s|--secret SECRET] [-n|--shortname NAME] "
+                 "[-v|--virtual-server SERVER] [-t|--type TYPE] "
+                 "[-m|--require-ma BOOL] [-c|--comment TEXT]");
       return false;
     }
 
@@ -162,6 +197,7 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "s:f:p:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
@@ -175,15 +211,17 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
         framedProtocol = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-user <username> [-p password] [-s "
-                   "service-type] [-f framed-protocol]");
+        console::e("Usage: ldapcli freeradius create-user <username> "
+                   "[-p|--password PASS] [-s|--service-type TYPE] "
+                   "[-f|--framed-protocol PROTO]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-user <username> [-p password] [-s "
-                 "service-type] [-f framed-protocol]");
+      console::e("Usage: ldapcli freeradius create-user <username> "
+                 "[-p|--password PASS] [-s|--service-type TYPE] "
+                 "[-f|--framed-protocol PROTO]");
       return false;
     }
 
@@ -205,6 +243,7 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "s:f:p:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
@@ -218,15 +257,17 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
         framedProtocol = optarg;
         break;
       default:
-        console::e("Usage: ldapcli update-user <username> [-p password] [-s "
-                   "service-type] [-f framed-protocol]");
+        console::e("Usage: ldapcli freeradius update-user <username> "
+                   "[-p|--password PASS] [-s|--service-type TYPE] "
+                   "[-f|--framed-protocol PROTO]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli update-user <username> [-p password] [-s "
-                 "service-type] [-f framed-protocol]");
+      console::e("Usage: ldapcli freeradius update-user <username> "
+                 "[-p|--password PASS] [-s|--service-type TYPE] "
+                 "[-f|--framed-protocol PROTO]");
       return false;
     }
 
@@ -234,12 +275,33 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
 
     return updateUser(username, baseDN, password, serviceType, framedProtocol);
   } else if (command == "delete-user") {
-    if (optind >= argc) {
-      console::e("Usage: ldapcli delete-user <username>");
-      return false;
+    static struct option long_options[] = {{"user", required_argument, 0, 'u'},
+                                           {nullptr, 0, 0, 0}};
+
+    std::string username;
+    int opt;
+    int option_index = 0;
+
+    optind = 3;
+    while ((opt = getopt_long(argc, argv, "u:", long_options, &option_index)) !=
+           -1) {
+      if (opt == 'u') {
+        username = optarg;
+      } else {
+        console::e("Usage: ldapcli freeradius delete-user <username> "
+                   "[--user USER]");
+        return false;
+      }
     }
 
-    std::string username = argv[optind];
+    if (username.empty() && optind < argc) {
+      username = argv[optind];
+    }
+    if (username.empty()) {
+      console::e("Usage: ldapcli freeradius delete-user <username> "
+                 "[--user USER]");
+      return false;
+    }
 
     return deleteUser(username, baseDN);
   } else if (command == "list-users") {

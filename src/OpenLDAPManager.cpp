@@ -10,15 +10,17 @@ OpenLDAPManager::OpenLDAPManager(LDAPConnection &connection)
     : m_connection(connection) {}
 
 void OpenLDAPManager::printUsage() const {
-  console::e("OPENLDAP Commands:");
-  console::e("  create-ou <ou-name> [base-dn]");
-  console::e("  delete-ou <ou-name> [base-dn]");
-  console::e("  update-ou <ou-name> [base-dn]");
-  console::e("  list-ous [base-dn]");
-  console::e("  list-people [base-dn]");
-  console::e("  create-person <cn> [base-dn]");
-  console::e("  update-person <cn> [base-dn]");
-  console::e("  delete-person <cn> [base-dn]");
+  console::e("OpenLDAP Commands:");
+  console::e("  create-ou <ou> [-p|--telephonenumber NUM] [-s|--street ADDR] "
+             "[-z|--postalcode CODE] [-S|--st STATE] [-L|--l CITY] "
+             "[-d|--description TEXT]");
+  console::e("  delete-ou <ou> [--ou OU]");
+  console::e("  update-ou <ou>");
+  console::e("  list-ous");
+  console::e("  list-people");
+  console::e("  create-person <cn> [options]");
+  console::e("  update-person <cn> [options]");
+  console::e("  delete-person <cn> [--cn CN]");
 }
 
 std::string OpenLDAPManager::getServiceName() const { return "openldap"; }
@@ -53,6 +55,7 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "p:s:z:S:L:d:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
@@ -75,17 +78,19 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
         description = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-ou <ou-name> [-p telephone] "
-                   "[-s street] [-z postalcode] [-S state] [-L city] "
-                   "[-d description]");
+        console::e("Usage: ldapcli openldap create-ou <ou> "
+                   "[-p|--telephonenumber NUM] [-s|--street ADDR] "
+                   "[-z|--postalcode CODE] [-S|--st STATE] [-L|--l CITY] "
+                   "[-d|--description TEXT]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-ou <ou-name> [-p telephone] "
-                 "[-s street] [-z postalcode] [-S state] [-L city] "
-                 "[-d description]");
+      console::e("Usage: ldapcli openldap create-ou <ou> "
+                 "[-p|--telephonenumber NUM] [-s|--street ADDR] "
+                 "[-z|--postalcode CODE] [-S|--st STATE] [-L|--l CITY] "
+                 "[-d|--description TEXT]");
       return false;
     }
 
@@ -94,17 +99,37 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
     return createOrganizationalUnit(ouName, baseDN, telephoneNumber, street,
                                     postalCode, st, l, description);
   } else if (command == "delete-ou") {
-    if (optind >= argc) {
-      console::e("Usage: ldapcli delete-ou <ou-name>");
+    static struct option long_options[] = {{"ou", required_argument, 0, 'o'},
+                                           {nullptr, 0, 0, 0}};
+
+    std::string ouName;
+    int opt;
+    int option_index = 0;
+
+    optind = 3;
+    while ((opt = getopt_long(argc, argv, "o:", long_options, &option_index)) !=
+           -1) {
+      if (opt == 'o') {
+        ouName = optarg;
+      } else {
+        console::e("Usage: ldapcli openldap delete-ou <ou> [--ou OU]");
+        return false;
+      }
+    }
+
+    if (ouName.empty() && optind < argc) {
+      ouName = argv[optind];
+    }
+    if (ouName.empty()) {
+      console::e("Usage: ldapcli openldap delete-ou <ou> [--ou OU]");
       return false;
     }
 
-    std::string ouName = argv[optind];
-
     return deleteOrganizationalUnit(ouName, baseDN);
   } else if (command == "update-ou") {
+    optind = 3;
     if (optind >= argc) {
-      console::e("Usage: ldapcli update-ou <ou-name>");
+      console::e("Usage: ldapcli openldap update-ou <ou>");
       return false;
     }
 
@@ -160,6 +185,7 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while (
         (opt = getopt_long(argc, argv, "u:g:s:m:d:e:t:n:M:H:P:i:l:r:z:L:S:C:",
                            long_options, &option_index)) != -1) {
@@ -299,6 +325,7 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while (
         (opt = getopt_long(argc, argv, "u:g:s:m:d:e:t:n:M:H:P:i:l:r:z:L:S:C:",
                            long_options, &option_index)) != -1) {
@@ -394,12 +421,31 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
                         departmentNumber, mobile, homePhone, pager, title,
                         telephoneNumber, street, postalCode, l, st, c);
   } else if (command == "delete-person") {
-    if (optind >= argc) {
-      console::e("Usage: ldapcli delete-person <cn>");
-      return false;
+    static struct option long_options[] = {{"cn", required_argument, 0, 'c'},
+                                           {nullptr, 0, 0, 0}};
+
+    std::string personName;
+    int opt;
+    int option_index = 0;
+
+    optind = 3;
+    while ((opt = getopt_long(argc, argv, "c:", long_options, &option_index)) !=
+           -1) {
+      if (opt == 'c') {
+        personName = optarg;
+      } else {
+        console::e("Usage: ldapcli openldap delete-person <cn> [--cn CN]");
+        return false;
+      }
     }
 
-    std::string personName = argv[optind];
+    if (personName.empty() && optind < argc) {
+      personName = argv[optind];
+    }
+    if (personName.empty()) {
+      console::e("Usage: ldapcli openldap delete-person <cn> [--cn CN]");
+      return false;
+    }
 
     return deletePerson(personName, baseDN);
   }

@@ -10,10 +10,12 @@ OpenDKIMManager::OpenDKIMManager(LDAPConnection &connection)
 
 void OpenDKIMManager::printUsage() const {
   console::e("OpenDKIM Commands:");
-  console::e("  create-identity <identity> [base-dn]");
-  console::e("  delete-identity <identity> [base-dn]");
-  console::e("  update-identity <identity> [base-dn]");
-  console::e("  list-identities [base-dn]");
+  console::e("  create-identity <identity> [-s|--selector SEL] [-k|--key KEY] "
+             "[-d|--domain DOMAIN]");
+  console::e("  delete-identity <identity> [--identity IDENTITY]");
+  console::e("  update-identity <identity> [-s|--selector SEL] [-k|--key KEY] "
+             "[-d|--domain DOMAIN]");
+  console::e("  list-identities");
 }
 
 std::string OpenDKIMManager::getServiceName() const { return "opendkim"; }
@@ -42,6 +44,7 @@ bool OpenDKIMManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "s:k:d:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
@@ -55,15 +58,15 @@ bool OpenDKIMManager::execute(int argc, char *argv[]) {
         domain = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-identity <identity> [-s selector] "
-                   "[-k key] [-d domain]");
+        console::e("Usage: ldapcli opendkim create-identity <identity> "
+                   "[-s|--selector SEL] [-k|--key KEY] [-d|--domain DOMAIN]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-identity <identity> [-s selector] [-k "
-                 "key] [-d domain]");
+      console::e("Usage: ldapcli opendkim create-identity <identity> "
+                 "[-s|--selector SEL] [-k|--key KEY] [-d|--domain DOMAIN]");
       return false;
     }
 
@@ -71,12 +74,33 @@ bool OpenDKIMManager::execute(int argc, char *argv[]) {
 
     return createIdentity(identity, baseDN, selector, key, domain);
   } else if (command == "delete-identity") {
-    if (optind >= argc) {
-      console::e("Usage: ldapcli delete-identity <identity>");
-      return false;
+    static struct option long_options[] = {
+        {"identity", required_argument, 0, 'i'}, {nullptr, 0, 0, 0}};
+
+    std::string identity;
+    int opt;
+    int option_index = 0;
+
+    optind = 3;
+    while ((opt = getopt_long(argc, argv, "i:", long_options, &option_index)) !=
+           -1) {
+      if (opt == 'i') {
+        identity = optarg;
+      } else {
+        console::e("Usage: ldapcli opendkim delete-identity <identity> "
+                   "[--identity IDENTITY]");
+        return false;
+      }
     }
 
-    std::string identity = argv[optind];
+    if (identity.empty() && optind < argc) {
+      identity = argv[optind];
+    }
+    if (identity.empty()) {
+      console::e("Usage: ldapcli opendkim delete-identity <identity> "
+                 "[--identity IDENTITY]");
+      return false;
+    }
 
     return deleteIdentity(identity, baseDN);
   } else if (command == "update-identity") {
@@ -94,6 +118,7 @@ bool OpenDKIMManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "s:k:d:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
@@ -107,16 +132,15 @@ bool OpenDKIMManager::execute(int argc, char *argv[]) {
         domain = optarg;
         break;
       default:
-        console::e(
-            "Usage: ldapcli update-identity <identity> [-s selector] [-k "
-            "key] [-d domain]");
+        console::e("Usage: ldapcli opendkim update-identity <identity> "
+                   "[-s|--selector SEL] [-k|--key KEY] [-d|--domain DOMAIN]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli update-identity <identity> [-s selector] [-k "
-                 "key] [-d domain]");
+      console::e("Usage: ldapcli opendkim update-identity <identity> "
+                 "[-s|--selector SEL] [-k|--key KEY] [-d|--domain DOMAIN]");
       return false;
     }
 

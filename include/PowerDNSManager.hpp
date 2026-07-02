@@ -46,6 +46,7 @@ private:
                         const std::string &baseDN) const;
   std::string recordTypeToAttribute(const std::string &recordType) const;
   bool validateZoneName(const std::string &zoneName) const;
+  void printRecordTypeOptions() const;
 };
 
 #endif

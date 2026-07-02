@@ -1,6 +1,7 @@
 #include "AsteriskManager.hpp"
 #include "Config.hpp"
 #include "Console.hpp"
+#include <getopt.h>
 #include <sstream>
 
 AsteriskManager::AsteriskManager(LDAPConnection &connection)
@@ -8,14 +9,22 @@ AsteriskManager::AsteriskManager(LDAPConnection &connection)
 
 void AsteriskManager::printUsage() const {
   console::e("Asterisk Commands:");
-  console::e("  create-account <account> [base-dn]");
-  console::e("  update-account <account> [base-dn]");
-  console::e("  delete-account <account> [base-dn]");
-  console::e("  list-accounts [base-dn]");
-  console::e("  create-voicemail <mailbox> [base-dn]");
-  console::e("  update-voicemail <mailbox> [base-dn]");
-  console::e("  delete-voicemail <mailbox> [base-dn]");
-  console::e("  list-voicemail [base-dn]");
+  console::e(
+      "  create-account <account> [-s|--secret SECRET] [-c|--caller-id ID] "
+      "[-m|--mailbox BOX]");
+  console::e(
+      "  update-account <account> [-s|--secret SECRET] [-c|--caller-id ID] "
+      "[-m|--mailbox BOX]");
+  console::e("  delete-account <account> [--account ACCOUNT]");
+  console::e("  list-accounts");
+  console::e(
+      "  create-voicemail <mailbox> [-p|--password PASS] [-f|--fullname NAME] "
+      "[-e|--email ADDR]");
+  console::e(
+      "  update-voicemail <mailbox> [-p|--password PASS] [-f|--fullname NAME] "
+      "[-e|--email ADDR]");
+  console::e("  delete-voicemail <mailbox> [--mailbox BOX]");
+  console::e("  list-voicemail");
 }
 
 std::string AsteriskManager::getServiceName() const { return "asterisk"; }
@@ -44,6 +53,7 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "s:c:m:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
@@ -57,15 +67,16 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
         mailbox = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-account <account-name> [-s secret] "
-                   "[-c caller-id] [-m mailbox]");
+        console::e(
+            "Usage: ldapcli asterisk create-account <account> "
+            "[-s|--secret SECRET] [-c|--caller-id ID] [-m|--mailbox BOX]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-account <account-name> [-s secret] [-c "
-                 "caller-id] [-m mailbox]");
+      console::e("Usage: ldapcli asterisk create-account <account> "
+                 "[-s|--secret SECRET] [-c|--caller-id ID] [-m|--mailbox BOX]");
       return false;
     }
 
@@ -73,12 +84,33 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
 
     return createAccount(accountName, baseDN, secret, callerId, mailbox);
   } else if (command == "delete-account") {
-    if (optind >= argc) {
-      console::e("Usage: ldapcli delete-account <account-name>");
-      return false;
+    static struct option long_options[] = {
+        {"account", required_argument, 0, 'a'}, {nullptr, 0, 0, 0}};
+
+    std::string accountName;
+    int opt;
+    int option_index = 0;
+
+    optind = 3;
+    while ((opt = getopt_long(argc, argv, "a:", long_options, &option_index)) !=
+           -1) {
+      if (opt == 'a') {
+        accountName = optarg;
+      } else {
+        console::e("Usage: ldapcli asterisk delete-account <account> "
+                   "[--account ACCOUNT]");
+        return false;
+      }
     }
 
-    std::string accountName = argv[optind];
+    if (accountName.empty() && optind < argc) {
+      accountName = argv[optind];
+    }
+    if (accountName.empty()) {
+      console::e("Usage: ldapcli asterisk delete-account <account> "
+                 "[--account ACCOUNT]");
+      return false;
+    }
 
     return deleteAccount(accountName, baseDN);
   } else if (command == "update-account") {
@@ -96,6 +128,7 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "s:c:m:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
@@ -109,15 +142,16 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
         mailbox = optarg;
         break;
       default:
-        console::e("Usage: ldapcli update-account <account-name> [-s secret] "
-                   "[-c caller-id] [-m mailbox]");
+        console::e(
+            "Usage: ldapcli asterisk update-account <account> "
+            "[-s|--secret SECRET] [-c|--caller-id ID] [-m|--mailbox BOX]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli update-account <account-name> [-s secret] [-c "
-                 "caller-id] [-m mailbox]");
+      console::e("Usage: ldapcli asterisk update-account <account> "
+                 "[-s|--secret SECRET] [-c|--caller-id ID] [-m|--mailbox BOX]");
       return false;
     }
 
@@ -141,6 +175,7 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "p:f:e:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
@@ -154,15 +189,16 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
         email = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-voicemail <mailbox> [-p password] "
-                   "[-f fullname] [-e email]");
+        console::e(
+            "Usage: ldapcli asterisk create-voicemail <mailbox> "
+            "[-p|--password PASS] [-f|--fullname NAME] [-e|--email ADDR]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-voicemail <mailbox> [-p password] [-f "
-                 "fullname] [-e email]");
+      console::e("Usage: ldapcli asterisk create-voicemail <mailbox> "
+                 "[-p|--password PASS] [-f|--fullname NAME] [-e|--email ADDR]");
       return false;
     }
 
@@ -184,6 +220,7 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
     int opt;
     int option_index = 0;
 
+    optind = 3;
     while ((opt = getopt_long(argc, argv, "p:f:e:", long_options,
                               &option_index)) != -1) {
       switch (opt) {
@@ -197,15 +234,16 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
         email = optarg;
         break;
       default:
-        console::e("Usage: ldapcli update-voicemail <mailbox> [-p password] "
-                   "[-f fullname] [-e email]");
+        console::e(
+            "Usage: ldapcli asterisk update-voicemail <mailbox> "
+            "[-p|--password PASS] [-f|--fullname NAME] [-e|--email ADDR]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli update-voicemail <mailbox> [-p password] [-f "
-                 "fullname] [-e email]");
+      console::e("Usage: ldapcli asterisk update-voicemail <mailbox> "
+                 "[-p|--password PASS] [-f|--fullname NAME] [-e|--email ADDR]");
       return false;
     }
 
@@ -213,12 +251,33 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
 
     return updateVoicemailBox(mailbox, baseDN, password, fullname, email);
   } else if (command == "delete-voicemail") {
-    if (optind >= argc) {
-      console::e("Usage: ldapcli delete-voicemail <mailbox>");
-      return false;
+    static struct option long_options[] = {
+        {"mailbox", required_argument, 0, 'm'}, {nullptr, 0, 0, 0}};
+
+    std::string mailbox;
+    int opt;
+    int option_index = 0;
+
+    optind = 3;
+    while ((opt = getopt_long(argc, argv, "m:", long_options, &option_index)) !=
+           -1) {
+      if (opt == 'm') {
+        mailbox = optarg;
+      } else {
+        console::e("Usage: ldapcli asterisk delete-voicemail <mailbox> "
+                   "[--mailbox BOX]");
+        return false;
+      }
     }
 
-    std::string mailbox = argv[optind];
+    if (mailbox.empty() && optind < argc) {
+      mailbox = argv[optind];
+    }
+    if (mailbox.empty()) {
+      console::e("Usage: ldapcli asterisk delete-voicemail <mailbox> "
+                 "[--mailbox BOX]");
+      return false;
+    }
 
     return deleteVoicemailBox(mailbox, baseDN);
   } else if (command == "list-voicemail") {
