@@ -180,7 +180,6 @@ bool LDAPConnection::connect(const std::string &uri, const std::string &bindDN,
     return false;
   }
 
- 
   rc = ldap_set_option(m_ldap, LDAP_OPT_X_TLS_CACERTFILE, netcrave_cert);
   /*
    * Embed CA certificate as byte array for TLS verification

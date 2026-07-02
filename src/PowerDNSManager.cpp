@@ -98,13 +98,15 @@ bool PowerDNSManager::execute(int argc, char *argv[]) {
         ttl = std::atoi(optarg);
         break;
       default:
-        console::e("Usage: ldapcli add-record <zone> <name> <type> <value> [-t ttl]");
+        console::e(
+            "Usage: ldapcli add-record <zone> <name> <type> <value> [-t ttl]");
         return false;
       }
     }
 
     if (optind + 3 >= argc) {
-      console::e("Usage: ldapcli add-record <zone> <name> <type> <value> [-t ttl]");
+      console::e(
+          "Usage: ldapcli add-record <zone> <name> <type> <value> [-t ttl]");
       return false;
     }
 
@@ -171,8 +173,7 @@ bool PowerDNSManager::listZones(const std::string &baseDN) {
   }
 
   std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
-    flatData.data(), results.size() + 1, 2
-  );
+      flatData.data(), results.size() + 1, 2);
 
   console::printTable(tableData);
   return true;
@@ -417,8 +418,7 @@ bool PowerDNSManager::listRecords(const std::string &zoneName,
   }
 
   std::mdspan<std::string, std::dextents<size_t, 2>> ldifData(
-    flatData.data(), results.size(), 2
-  );
+      flatData.data(), results.size(), 2);
 
   console::printLdif(ldifData);
   return true;

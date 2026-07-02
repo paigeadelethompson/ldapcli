@@ -50,7 +50,8 @@ bool SendmailManager::execute(int argc, char *argv[]) {
         host = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-mta <mta-name> [-c cluster] [-h host]");
+        console::e(
+            "Usage: ldapcli create-mta <mta-name> [-c cluster] [-h host]");
         return false;
       }
     }
@@ -118,8 +119,7 @@ bool SendmailManager::listMTAs(const std::string &baseDN) {
   }
 
   std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
-    flatData.data(), results.size() + 1, 2
-  );
+      flatData.data(), results.size() + 1, 2);
 
   console::printTable(tableData);
   return true;

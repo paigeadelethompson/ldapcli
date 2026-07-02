@@ -131,8 +131,10 @@ bool KerberosManager::execute(int argc, char *argv[]) {
         console::e("  -L, --lastfailedauth <date>    Last failed auth");
         console::e("  -C, --loginfailedcount <count> Login failed count");
         console::e("  -a, --principalaliases <aliases> Principal aliases");
-        console::e("  -d, --allowedtodelegateto <services> Allowed to delegate to");
-        console::e("  -i, --principalauthind <indicators> Principal auth indicators");
+        console::e(
+            "  -d, --allowedtodelegateto <services> Allowed to delegate to");
+        console::e(
+            "  -i, --principalauthind <indicators> Principal auth indicators");
         return false;
       }
     }
@@ -248,8 +250,10 @@ bool KerberosManager::execute(int argc, char *argv[]) {
         console::e("  -L, --lastfailedauth <date>    Last failed auth");
         console::e("  -C, --loginfailedcount <count> Login failed count");
         console::e("  -a, --principalaliases <aliases> Principal aliases");
-        console::e("  -d, --allowedtodelegateto <services> Allowed to delegate to");
-        console::e("  -i, --principalauthind <indicators> Principal auth indicators");
+        console::e(
+            "  -d, --allowedtodelegateto <services> Allowed to delegate to");
+        console::e(
+            "  -i, --principalauthind <indicators> Principal auth indicators");
         return false;
       }
     }
@@ -828,8 +832,7 @@ bool KerberosManager::listPrincipals(const std::string &baseDN) {
   }
 
   std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
-    flatData.data(), results.size() + 1, 2
-  );
+      flatData.data(), results.size() + 1, 2);
 
   console::printTable(tableData);
   return true;

@@ -55,13 +55,15 @@ bool OpenDKIMManager::execute(int argc, char *argv[]) {
         domain = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-identity <identity> [-s selector] [-k key] [-d domain]");
+        console::e("Usage: ldapcli create-identity <identity> [-s selector] "
+                   "[-k key] [-d domain]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-identity <identity> [-s selector] [-k key] [-d domain]");
+      console::e("Usage: ldapcli create-identity <identity> [-s selector] [-k "
+                 "key] [-d domain]");
       return false;
     }
 
@@ -123,8 +125,7 @@ bool OpenDKIMManager::listIdentities(const std::string &baseDN) {
   }
 
   std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
-    flatData.data(), results.size() + 1, 2
-  );
+      flatData.data(), results.size() + 1, 2);
 
   console::printTable(tableData);
   return true;
@@ -255,13 +256,15 @@ bool OpenDKIMManager::updateIdentity(const std::string &identity,
       domain = optarg;
       break;
     default:
-      console::e("Usage: ldapcli update-identity <identity> [-s selector] [-k key] [-d domain]");
+      console::e("Usage: ldapcli update-identity <identity> [-s selector] [-k "
+                 "key] [-d domain]");
       return false;
     }
   }
 
   if (optind >= argc) {
-    console::e("Usage: ldapcli update-identity <identity> [-s selector] [-k key] [-d domain]");
+    console::e("Usage: ldapcli update-identity <identity> [-s selector] [-k "
+               "key] [-d domain]");
     return false;
   }
 

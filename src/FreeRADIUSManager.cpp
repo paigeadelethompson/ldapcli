@@ -57,13 +57,15 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
         type = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-client <client-name> [-s secret] [-n shortname] [-t type]");
+        console::e("Usage: ldapcli create-client <client-name> [-s secret] [-n "
+                   "shortname] [-t type]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-client <client-name> [-s secret] [-n shortname] [-t type]");
+      console::e("Usage: ldapcli create-client <client-name> [-s secret] [-n "
+                 "shortname] [-t type]");
       return false;
     }
 
@@ -118,13 +120,15 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
         framedProtocol = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-user <username> [-p password] [-s service-type] [-f framed-protocol]");
+        console::e("Usage: ldapcli create-user <username> [-p password] [-s "
+                   "service-type] [-f framed-protocol]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-user <username> [-p password] [-s service-type] [-f framed-protocol]");
+      console::e("Usage: ldapcli create-user <username> [-p password] [-s "
+                 "service-type] [-f framed-protocol]");
       return false;
     }
 
@@ -295,8 +299,7 @@ bool FreeRADIUSManager::listClients(const std::string &baseDN) {
   }
 
   std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
-    flatData.data(), results.size() + 1, 2
-  );
+      flatData.data(), results.size() + 1, 2);
 
   console::printTable(tableData);
   return true;
@@ -437,8 +440,7 @@ bool FreeRADIUSManager::listUsers(const std::string &baseDN) {
   }
 
   std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
-    flatData.data(), results.size() + 1, 2
-  );
+      flatData.data(), results.size() + 1, 2);
 
   console::printTable(tableData);
   return true;

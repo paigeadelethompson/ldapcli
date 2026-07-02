@@ -56,13 +56,15 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
         mailbox = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-account <account-name> [-s secret] [-c caller-id] [-m mailbox]");
+        console::e("Usage: ldapcli create-account <account-name> [-s secret] "
+                   "[-c caller-id] [-m mailbox]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-account <account-name> [-s secret] [-c caller-id] [-m mailbox]");
+      console::e("Usage: ldapcli create-account <account-name> [-s secret] [-c "
+                 "caller-id] [-m mailbox]");
       return false;
     }
 
@@ -117,13 +119,15 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
         email = optarg;
         break;
       default:
-        console::e("Usage: ldapcli create-voicemail <mailbox> [-p password] [-f fullname] [-e email]");
+        console::e("Usage: ldapcli create-voicemail <mailbox> [-p password] "
+                   "[-f fullname] [-e email]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      console::e("Usage: ldapcli create-voicemail <mailbox> [-p password] [-f fullname] [-e email]");
+      console::e("Usage: ldapcli create-voicemail <mailbox> [-p password] [-f "
+                 "fullname] [-e email]");
       return false;
     }
 
@@ -337,8 +341,7 @@ bool AsteriskManager::listAccounts(const std::string &baseDN) {
   }
 
   std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
-    flatData.data(), results.size() + 1, 2
-  );
+      flatData.data(), results.size() + 1, 2);
 
   console::printTable(tableData);
   return true;
@@ -500,8 +503,7 @@ bool AsteriskManager::listVoicemailBoxes(const std::string &baseDN) {
   }
 
   std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
-    flatData.data(), results.size() + 1, 2
-  );
+      flatData.data(), results.size() + 1, 2);
 
   console::printTable(tableData);
   return true;

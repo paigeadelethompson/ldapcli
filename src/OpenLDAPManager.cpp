@@ -61,14 +61,14 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
         break;
       default:
         console::e("Usage: ldapcli create-ou <ou-name> [-p password] "
-                     "[-f fullname] [-e email]");
+                   "[-f fullname] [-e email]");
         return false;
       }
     }
 
     if (optind >= argc) {
       console::e("Usage: ldapcli create-ou <ou-name> [-p password] "
-                   "[-f fullname] [-e email]");
+                 "[-f fullname] [-e email]");
       return false;
     }
 
@@ -390,8 +390,7 @@ bool OpenLDAPManager::listPeople(const std::string &baseDN) {
   }
 
   std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
-    flatData.data(), results.size() + 1, 2
-  );
+      flatData.data(), results.size() + 1, 2);
 
   console::printTable(tableData);
   return true;
@@ -1043,8 +1042,7 @@ bool OpenLDAPManager::listOrganizationalUnits(const std::string &baseDN) {
   }
 
   std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
-    flatData.data(), results.size() + 1, 2
-  );
+      flatData.data(), results.size() + 1, 2);
 
   console::printTable(tableData);
   return true;
