@@ -4,12 +4,8 @@ project(ldapcli VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
 # Copy config file to build directory
 file(COPY ${CMAKE_SOURCE_DIR}/config/ldapcli.conf DESTINATION ${CMAKE_BINARY_DIR})
-
-# Copy schemas directory to build directory
-file(COPY ${CMAKE_SOURCE_DIR}/schemas DESTINATION ${CMAKE_BINARY_DIR}/schemas)
 
 # Find LDAP libraries using pkg-config
 find_package(PkgConfig REQUIRED)
@@ -47,6 +43,3 @@ target_link_libraries(ldapcli PkgConfig::LDAP)
 
 # Install rules
 install(FILES ${CMAKE_SOURCE_DIR}/config/ldapcli.conf DESTINATION /etc/ldapcli)
-
-# Install schemas directory
-install(DIRECTORY ${CMAKE_SOURCE_DIR}/schemas DESTINATION share/ldapcli)
