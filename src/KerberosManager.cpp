@@ -1,5 +1,6 @@
 #include "KerberosManager.hpp"
 #include "Config.hpp"
+#include "Console.hpp"
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -8,11 +9,11 @@ KerberosManager::KerberosManager(LDAPConnection &connection)
     : m_connection(connection) {}
 
 void KerberosManager::printUsage() const {
-  std::cout << "Kerberos Commands:" << std::endl;
-  std::cout << "  create-principal <principal> [base-dn]" << std::endl;
-  std::cout << "  delete-principal <principal> [base-dn]" << std::endl;
-  std::cout << "  update-principal <principal> [base-dn]" << std::endl;
-  std::cout << "  list-principals [base-dn]" << std::endl;
+  console::e("Kerberos Commands:");
+  console::e("  create-principal <principal> [base-dn]");
+  console::e("  delete-principal <principal> [base-dn]");
+  console::e("  update-principal <principal> [base-dn]");
+  console::e("  list-principals [base-dn]");
 }
 
 std::string KerberosManager::getServiceName() const { return "kerberos"; }
@@ -113,51 +114,31 @@ bool KerberosManager::execute(int argc, char *argv[]) {
         principalAuthInd = optarg;
         break;
       default:
-        std::cerr << "Usage: ldapcli create-principal <principal> [options]"
-                  << std::endl;
-        std::cerr << "Options:" << std::endl;
-        std::cerr << "  -p, --password <secret>        Kerberos password"
-                  << std::endl;
-        std::cerr << "  -f, --fullname <name>          Full name" << std::endl;
-        std::cerr << "  -e, --email <email>            Email address"
-                  << std::endl;
-        std::cerr << "  -c, --canonicalname <name>     Canonical principal name"
-                  << std::endl;
-        std::cerr << "  -t, --principaltype <type>     Principal type"
-                  << std::endl;
-        std::cerr << "  -x, --principalexpiration <date> Principal expiration"
-                  << std::endl;
-        std::cerr << "  -X, --passwordexpiration <date> Password expiration"
-                  << std::endl;
-        std::cerr << "  -F, --ticketflags <flags>      Ticket flags"
-                  << std::endl;
-        std::cerr << "  -l, --maxticketlife <seconds>  Max ticket lifetime"
-                  << std::endl;
-        std::cerr << "  -r, --maxrenewableage <seconds> Max renewable age"
-                  << std::endl;
-        std::cerr << "  -P, --lastpwdchange <date>     Last password change"
-                  << std::endl;
-        std::cerr << "  -S, --lastsuccessfulauth <date> Last successful auth"
-                  << std::endl;
-        std::cerr << "  -L, --lastfailedauth <date>    Last failed auth"
-                  << std::endl;
-        std::cerr << "  -C, --loginfailedcount <count> Login failed count"
-                  << std::endl;
-        std::cerr << "  -a, --principalaliases <aliases> Principal aliases"
-                  << std::endl;
-        std::cerr
-            << "  -d, --allowedtodelegateto <services> Allowed to delegate to"
-            << std::endl;
-        std::cerr
-            << "  -i, --principalauthind <indicators> Principal auth indicators"
-            << std::endl;
+        console::e("Usage: ldapcli create-principal <principal> [options]");
+        console::e("Options:");
+        console::e("  -p, --password <secret>        Kerberos password");
+        console::e("  -f, --fullname <name>          Full name");
+        console::e("  -e, --email <email>            Email address");
+        console::e("  -c, --canonicalname <name>     Canonical principal name");
+        console::e("  -t, --principaltype <type>     Principal type");
+        console::e("  -x, --principalexpiration <date> Principal expiration");
+        console::e("  -X, --passwordexpiration <date> Password expiration");
+        console::e("  -F, --ticketflags <flags>      Ticket flags");
+        console::e("  -l, --maxticketlife <seconds>  Max ticket lifetime");
+        console::e("  -r, --maxrenewableage <seconds> Max renewable age");
+        console::e("  -P, --lastpwdchange <date>     Last password change");
+        console::e("  -S, --lastsuccessfulauth <date> Last successful auth");
+        console::e("  -L, --lastfailedauth <date>    Last failed auth");
+        console::e("  -C, --loginfailedcount <count> Login failed count");
+        console::e("  -a, --principalaliases <aliases> Principal aliases");
+        console::e("  -d, --allowedtodelegateto <services> Allowed to delegate to");
+        console::e("  -i, --principalauthind <indicators> Principal auth indicators");
         return false;
       }
     }
 
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli create-principal <principal> [options]"
-                << std::endl;
+      console::e("Usage: ldapcli create-principal <principal> [options]");
       return false;
     }
 
@@ -171,7 +152,7 @@ bool KerberosManager::execute(int argc, char *argv[]) {
                            allowedToDelegateTo, principalAuthInd);
   } else if (command == "delete-principal") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli delete-principal <principal>" << std::endl;
+      console::e("Usage: ldapcli delete-principal <principal>");
       return false;
     }
 
@@ -253,46 +234,28 @@ bool KerberosManager::execute(int argc, char *argv[]) {
         principalAuthInd = optarg;
         break;
       default:
-        std::cerr << "Usage: ldapcli update-principal <principal> [options]"
-                  << std::endl;
-        std::cerr << "Options:" << std::endl;
-        std::cerr << "  -c, --canonicalname <name>     Canonical principal name"
-                  << std::endl;
-        std::cerr << "  -t, --principaltype <type>     Principal type"
-                  << std::endl;
-        std::cerr << "  -x, --principalexpiration <date> Principal expiration"
-                  << std::endl;
-        std::cerr << "  -X, --passwordexpiration <date> Password expiration"
-                  << std::endl;
-        std::cerr << "  -F, --ticketflags <flags>      Ticket flags"
-                  << std::endl;
-        std::cerr << "  -l, --maxticketlife <seconds>  Max ticket lifetime"
-                  << std::endl;
-        std::cerr << "  -r, --maxrenewableage <seconds> Max renewable age"
-                  << std::endl;
-        std::cerr << "  -P, --lastpwdchange <date>     Last password change"
-                  << std::endl;
-        std::cerr << "  -S, --lastsuccessfulauth <date> Last successful auth"
-                  << std::endl;
-        std::cerr << "  -L, --lastfailedauth <date>    Last failed auth"
-                  << std::endl;
-        std::cerr << "  -C, --loginfailedcount <count> Login failed count"
-                  << std::endl;
-        std::cerr << "  -a, --principalaliases <aliases> Principal aliases"
-                  << std::endl;
-        std::cerr
-            << "  -d, --allowedtodelegateto <services> Allowed to delegate to"
-            << std::endl;
-        std::cerr
-            << "  -i, --principalauthind <indicators> Principal auth indicators"
-            << std::endl;
+        console::e("Usage: ldapcli update-principal <principal> [options]");
+        console::e("Options:");
+        console::e("  -c, --canonicalname <name>     Canonical principal name");
+        console::e("  -t, --principaltype <type>     Principal type");
+        console::e("  -x, --principalexpiration <date> Principal expiration");
+        console::e("  -X, --passwordexpiration <date> Password expiration");
+        console::e("  -F, --ticketflags <flags>      Ticket flags");
+        console::e("  -l, --maxticketlife <seconds>  Max ticket lifetime");
+        console::e("  -r, --maxrenewableage <seconds> Max renewable age");
+        console::e("  -P, --lastpwdchange <date>     Last password change");
+        console::e("  -S, --lastsuccessfulauth <date> Last successful auth");
+        console::e("  -L, --lastfailedauth <date>    Last failed auth");
+        console::e("  -C, --loginfailedcount <count> Login failed count");
+        console::e("  -a, --principalaliases <aliases> Principal aliases");
+        console::e("  -d, --allowedtodelegateto <services> Allowed to delegate to");
+        console::e("  -i, --principalauthind <indicators> Principal auth indicators");
         return false;
       }
     }
 
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli update-principal <principal> [options]"
-                << std::endl;
+      console::e("Usage: ldapcli update-principal <principal> [options]");
       return false;
     }
 
@@ -324,9 +287,9 @@ bool KerberosManager::createPrincipal(
     const std::string &principalAuthInd) {
   std::string principalDN = getPrincipalDN(principal, baseDN);
 
-  std::cout << "Creating Kerberos principal:" << std::endl;
-  std::cout << "  Principal: " << principal << std::endl;
-  std::cout << "  Principal DN: " << principalDN << std::endl;
+  console::e("Creating Kerberos principal:");
+  console::e("  Principal: {}", principal);
+  console::e("  Principal DN: {}", principalDN);
 
   // Create LDAP mods for Kerberos principal
   std::vector<LDAPMod> mods;
@@ -589,7 +552,7 @@ bool KerberosManager::createPrincipal(
     throw std::runtime_error(m_connection.getError());
   }
 
-  std::cout << "Principal created successfully!" << std::endl;
+  console::e("Principal created successfully!");
   return true;
 }
 
@@ -605,9 +568,9 @@ bool KerberosManager::updatePrincipal(
     const std::string &principalAuthInd) {
   std::string principalDN = getPrincipalDN(principal, baseDN);
 
-  std::cout << "Updating Kerberos principal:" << std::endl;
-  std::cout << "  Principal: " << principal << std::endl;
-  std::cout << "  Principal DN: " << principalDN << std::endl;
+  console::e("Updating Kerberos principal:");
+  console::e("  Principal: {}", principal);
+  console::e("  Principal DN: {}", principalDN);
 
   std::vector<LDAPMod> mods;
 
@@ -816,7 +779,7 @@ bool KerberosManager::updatePrincipal(
     throw std::runtime_error(m_connection.getError());
   }
 
-  std::cout << "Principal updated successfully!" << std::endl;
+  console::e("Principal updated successfully!");
   return true;
 }
 
@@ -824,40 +787,51 @@ bool KerberosManager::deletePrincipal(const std::string &principal,
                                       const std::string &baseDN) {
   std::string principalDN = getPrincipalDN(principal, baseDN);
 
-  std::cout << "Deleting Kerberos principal:" << std::endl;
-  std::cout << "  Principal: " << principal << std::endl;
-  std::cout << "  Principal DN: " << principalDN << std::endl;
+  console::e("Deleting Kerberos principal:");
+  console::e("  Principal: {}", principal);
+  console::e("  Principal DN: {}", principalDN);
 
   if (!m_connection.deleteEntry(principalDN)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Principal deleted successfully!" << std::endl;
+  console::e("Principal deleted successfully!");
   return true;
 }
 
 bool KerberosManager::listPrincipals(const std::string &baseDN) {
-  std::cout << "Listing Kerberos principals:" << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Listing Kerberos principals:");
+  console::e("Base DN: {}", baseDN);
 
   std::vector<std::vector<std::pair<std::string, std::string>>> results;
   std::string filter = "(objectClass=krb5Principal)";
 
   if (!m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Found " << results.size() << " principals:" << std::endl;
+  if (results.empty()) {
+    console::e("No principals found.");
+    return true;
+  }
 
-  for (size_t i = 0; i < results.size(); i++) {
-    std::cout << "\\nPrincipal " << (i + 1) << ":" << std::endl;
-    for (const auto &[attr, value] : results[i]) {
-      std::cout << "  " << attr << ": " << value << std::endl;
+  // Convert results to table format for display
+  std::vector<std::string> flatData;
+  flatData.reserve(results.size() * 2);
+  for (const auto &entry : results) {
+    for (const auto &[attr, value] : entry) {
+      flatData.push_back(attr);
+      flatData.push_back(value);
     }
   }
 
+  std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
+    flatData.data(), results.size() + 1, 2
+  );
+
+  console::printTable(tableData);
   return true;
 }
 

@@ -68,11 +68,11 @@ LDAPSchemaManager::getSchemaPath(const std::string &serviceName) const {
 }
 
 bool LDAPSchemaManager::listServices() {
-  std::cout << "Available LDAP Services:" << std::endl;
-  std::cout << "-----------------------" << std::endl;
+  console::e("Available LDAP Services:");
+  console::e("-----------------------");
 
   for (const auto &[name, schema] : m_serviceSchemas) {
-    std::cout << "  - " << name << std::endl;
+    console::e("  - {}", name);
   }
 
   return true;
@@ -81,19 +81,19 @@ bool LDAPSchemaManager::listServices() {
 bool LDAPSchemaManager::createService(const std::string &serviceName,
                                       const std::string &baseDN) {
   if (!validateService(serviceName)) {
-    std::cerr << "Error: Unknown service '" << serviceName << "'" << std::endl;
+    console::e("Error: Unknown service '{}'", serviceName);
     return false;
   }
 
-  std::cout << "Creating service base entry for: " << serviceName << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Creating service base entry for: {}", serviceName);
+  console::e("Base DN: {}", baseDN);
 
   // Create base entry with appropriate object class
   // This is a placeholder - actual implementation depends on schema
   std::string entryDN = baseDN + "," + serviceName;
 
   // TODO: Implement based on specific schema requirements
-  std::cout << "Entry DN: " << entryDN << std::endl;
+  console::e("Entry DN: {}", entryDN);
 
   return true;
 }
@@ -101,12 +101,12 @@ bool LDAPSchemaManager::createService(const std::string &serviceName,
 bool LDAPSchemaManager::updateService(const std::string &serviceName,
                                       const std::string &baseDN) {
   if (!validateService(serviceName)) {
-    std::cerr << "Error: Unknown service '" << serviceName << "'" << std::endl;
+    console::e("Error: Unknown service '{}'", serviceName);
     return false;
   }
 
-  std::cout << "Updating service: " << serviceName << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Updating service: {}", serviceName);
+  console::e("Base DN: {}", baseDN);
 
   // TODO: Implement update logic
   return true;
@@ -115,12 +115,12 @@ bool LDAPSchemaManager::updateService(const std::string &serviceName,
 bool LDAPSchemaManager::deleteService(const std::string &serviceName,
                                       const std::string &baseDN) {
   if (!validateService(serviceName)) {
-    std::cerr << "Error: Unknown service '" << serviceName << "'" << std::endl;
+    console::e("Error: Unknown service '{}'", serviceName);
     return false;
   }
 
-  std::cout << "Deleting service: " << serviceName << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Deleting service: {}", serviceName);
+  console::e("Base DN: {}", baseDN);
 
   // TODO: Implement delete logic
   return true;
@@ -129,32 +129,40 @@ bool LDAPSchemaManager::deleteService(const std::string &serviceName,
 bool LDAPSchemaManager::listServiceEntries(const std::string &serviceName,
                                            const std::string &baseDN) {
   if (!validateService(serviceName)) {
-    std::cerr << "Error: Unknown service '" << serviceName << "'" << std::endl;
+    console::e("Error: Unknown service '{}'", serviceName);
     return false;
   }
 
-  std::cout << "Listing entries for service: " << serviceName << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Listing entries for service: {}", serviceName);
+  console::e("Base DN: {}", baseDN);
 
   // Search for entries
   std::vector<std::vector<std::pair<std::string, std::string>>> results;
   std::string filter = "(objectClass=*)";
 
-  if (m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
-    std::cout << "Found " << results.size() << " entries:" << std::endl;
+  if (!m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
+    console::e("Error: {}", m_connection.getError());
+    return false;
+  }
 
-    for (size_t i = 0; i < results.size(); i++) {
-      std::cout << "\nEntry " << (i + 1) << ":" << std::endl;
-      for (const auto &[attr, value] : results[i]) {
-        std::cout << "  " << attr << ": " << value << std::endl;
-      }
-    }
-
+  if (results.empty()) {
+    console::e("No entries found.");
     return true;
   }
 
-  std::cerr << "Error: " << m_connection.getError() << std::endl;
-  return false;
+  // Convert results to table format for display
+  std::vector<std::vector<std::string>> tableData;
+  for (const auto &entry : results) {
+    std::vector<std::string> rowData;
+    for (const auto &[attr, value] : entry) {
+      rowData.push_back(attr);
+      rowData.push_back(value);
+    }
+    tableData.push_back(rowData);
+  }
+
+  console::printTable(tableData);
+  return true;
 }
 
 bool LDAPSchemaManager::createServiceEntry(const std::string &serviceName,
@@ -162,13 +170,13 @@ bool LDAPSchemaManager::createServiceEntry(const std::string &serviceName,
                                            const std::string &entryDN,
                                            const std::string &objectClass) {
   if (!validateService(serviceName)) {
-    std::cerr << "Error: Unknown service '" << serviceName << "'" << std::endl;
+    console::e("Error: Unknown service '{}'", serviceName);
     return false;
   }
 
-  std::cout << "Creating entry for service: " << serviceName << std::endl;
-  std::cout << "Entry DN: " << entryDN << std::endl;
-  std::cout << "Object Class: " << objectClass << std::endl;
+  console::e("Creating entry for service: {}", serviceName);
+  console::e("Entry DN: {}", entryDN);
+  console::e("Object Class: {}", objectClass);
 
   // TODO: Implement based on specific schema requirements
   return true;
@@ -179,13 +187,13 @@ bool LDAPSchemaManager::updateServiceEntry(const std::string &serviceName,
                                            const std::string &entryDN,
                                            const std::string &objectClass) {
   if (!validateService(serviceName)) {
-    std::cerr << "Error: Unknown service '" << serviceName << "'" << std::endl;
+    console::e("Error: Unknown service '{}'", serviceName);
     return false;
   }
 
-  std::cout << "Updating entry for service: " << serviceName << std::endl;
-  std::cout << "Entry DN: " << entryDN << std::endl;
-  std::cout << "Object Class: " << objectClass << std::endl;
+  console::e("Updating entry for service: {}", serviceName);
+  console::e("Entry DN: {}", entryDN);
+  console::e("Object Class: {}", objectClass);
 
   // TODO: Implement update logic
   return true;
@@ -195,12 +203,12 @@ bool LDAPSchemaManager::deleteServiceEntry(const std::string &serviceName,
                                            const std::string &baseDN,
                                            const std::string &entryDN) {
   if (!validateService(serviceName)) {
-    std::cerr << "Error: Unknown service '" << serviceName << "'" << std::endl;
+    console::e("Error: Unknown service '{}'", serviceName);
     return false;
   }
 
-  std::cout << "Deleting entry for service: " << serviceName << std::endl;
-  std::cout << "Entry DN: " << entryDN << std::endl;
+  console::e("Deleting entry for service: {}", serviceName);
+  console::e("Entry DN: {}", entryDN);
 
   // TODO: Implement delete logic
   return true;

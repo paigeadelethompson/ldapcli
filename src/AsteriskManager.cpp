@@ -1,20 +1,20 @@
 #include "AsteriskManager.hpp"
 #include "Config.hpp"
-#include <iostream>
+#include "Console.hpp"
 #include <sstream>
 
 AsteriskManager::AsteriskManager(LDAPConnection &connection)
     : m_connection(connection) {}
 
 void AsteriskManager::printUsage() const {
-  std::cout << "Asterisk Commands:" << std::endl;
-  std::cout << "  create-account <account> [base-dn]" << std::endl;
-  std::cout << "  delete-account <account> [base-dn]" << std::endl;
-  std::cout << "  update-account <account> [base-dn]" << std::endl;
-  std::cout << "  list-accounts [base-dn]" << std::endl;
-  std::cout << "  create-voicemail <mailbox> [base-dn]" << std::endl;
-  std::cout << "  delete-voicemail <mailbox> [base-dn]" << std::endl;
-  std::cout << "  list-voicemail [base-dn]" << std::endl;
+  console::e("Asterisk Commands:");
+  console::e("  create-account <account> [base-dn]");
+  console::e("  delete-account <account> [base-dn]");
+  console::e("  update-account <account> [base-dn]");
+  console::e("  list-accounts [base-dn]");
+  console::e("  create-voicemail <mailbox> [base-dn]");
+  console::e("  delete-voicemail <mailbox> [base-dn]");
+  console::e("  list-voicemail [base-dn]");
 }
 
 std::string AsteriskManager::getServiceName() const { return "asterisk"; }
@@ -56,17 +56,13 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
         mailbox = optarg;
         break;
       default:
-        std::cerr << "Usage: ldapcli create-account <account-name> [-s secret] "
-                     "[-c caller-id] [-m mailbox]"
-                  << std::endl;
+        console::e("Usage: ldapcli create-account <account-name> [-s secret] [-c caller-id] [-m mailbox]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli create-account <account-name> [-s secret] "
-                   "[-c caller-id] [-m mailbox]"
-                << std::endl;
+      console::e("Usage: ldapcli create-account <account-name> [-s secret] [-c caller-id] [-m mailbox]");
       return false;
     }
 
@@ -75,7 +71,7 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
     return createAccount(accountName, baseDN, secret, callerId, mailbox);
   } else if (command == "delete-account") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli delete-account <account-name>" << std::endl;
+      console::e("Usage: ldapcli delete-account <account-name>");
       return false;
     }
 
@@ -84,7 +80,7 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
     return deleteAccount(accountName, baseDN);
   } else if (command == "update-account") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli update-account <account-name>" << std::endl;
+      console::e("Usage: ldapcli update-account <account-name>");
       return false;
     }
 
@@ -121,17 +117,13 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
         email = optarg;
         break;
       default:
-        std::cerr << "Usage: ldapcli create-voicemail <mailbox> [-p password] "
-                     "[-f fullname] [-e email]"
-                  << std::endl;
+        console::e("Usage: ldapcli create-voicemail <mailbox> [-p password] [-f fullname] [-e email]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli create-voicemail <mailbox> [-p password] "
-                   "[-f fullname] [-e email]"
-                << std::endl;
+      console::e("Usage: ldapcli create-voicemail <mailbox> [-p password] [-f fullname] [-e email]");
       return false;
     }
 
@@ -140,7 +132,7 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
     return createVoicemailBox(mailbox, baseDN, password, fullname, email);
   } else if (command == "delete-voicemail") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli delete-voicemail <mailbox>" << std::endl;
+      console::e("Usage: ldapcli delete-voicemail <mailbox>");
       return false;
     }
 
@@ -162,9 +154,9 @@ bool AsteriskManager::createAccount(const std::string &accountName,
                                     const std::string &mailbox) {
   std::string accountDN = getAccountDN(accountName, baseDN);
 
-  std::cout << "Creating Asterisk account:" << std::endl;
-  std::cout << "  Account Name: " << accountName << std::endl;
-  std::cout << "  Account DN: " << accountDN << std::endl;
+  console::e("Creating Asterisk account:");
+  console::e("  Account Name: {}", accountName);
+  console::e("  Account DN: {}", accountDN);
 
   // Create LDAP mods for AsteriskSIPUser object class
   std::vector<LDAPMod> mods;
@@ -279,11 +271,11 @@ bool AsteriskManager::createAccount(const std::string &accountName,
   modPtrs.push_back(nullptr);
 
   if (!m_connection.addEntry(accountDN, modPtrs.data())) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Account created successfully!" << std::endl;
+  console::e("Account created successfully!");
   return true;
 }
 
@@ -291,12 +283,12 @@ bool AsteriskManager::updateAccount(const std::string &accountName,
                                     const std::string &baseDN) {
   std::string accountDN = getAccountDN(accountName, baseDN);
 
-  std::cout << "Updating Asterisk account:" << std::endl;
-  std::cout << "  Account Name: " << accountName << std::endl;
-  std::cout << "  Account DN: " << accountDN << std::endl;
+  console::e("Updating Asterisk account:");
+  console::e("  Account Name: {}", accountName);
+  console::e("  Account DN: {}", accountDN);
 
   // TODO: Implement update logic with command line arguments
-  std::cerr << "Update functionality not yet implemented" << std::endl;
+  console::e("Update functionality not yet implemented");
   return false;
 }
 
@@ -304,40 +296,51 @@ bool AsteriskManager::deleteAccount(const std::string &accountName,
                                     const std::string &baseDN) {
   std::string accountDN = getAccountDN(accountName, baseDN);
 
-  std::cout << "Deleting Asterisk account:" << std::endl;
-  std::cout << "  Account Name: " << accountName << std::endl;
-  std::cout << "  Account DN: " << accountDN << std::endl;
+  console::e("Deleting Asterisk account:");
+  console::e("  Account Name: {}", accountName);
+  console::e("  Account DN: {}", accountDN);
 
   if (!m_connection.deleteEntry(accountDN)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Account deleted successfully!" << std::endl;
+  console::e("Account deleted successfully!");
   return true;
 }
 
 bool AsteriskManager::listAccounts(const std::string &baseDN) {
-  std::cout << "Listing Asterisk accounts:" << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Listing Asterisk accounts:");
+  console::e("Base DN: {}", baseDN);
 
   std::vector<std::vector<std::pair<std::string, std::string>>> results;
   std::string filter = "(objectClass=AsteriskSIPUser)";
 
   if (!m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Found " << results.size() << " accounts:" << std::endl;
+  if (results.empty()) {
+    console::e("No accounts found.");
+    return true;
+  }
 
-  for (size_t i = 0; i < results.size(); i++) {
-    std::cout << "\nAccount " << (i + 1) << ":" << std::endl;
-    for (const auto &[attr, value] : results[i]) {
-      std::cout << "  " << attr << ": " << value << std::endl;
+  // Convert results to table format for display
+  std::vector<std::string> flatData;
+  flatData.reserve(results.size() * 2);
+  for (const auto &entry : results) {
+    for (const auto &[attr, value] : entry) {
+      flatData.push_back(attr);
+      flatData.push_back(value);
     }
   }
 
+  std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
+    flatData.data(), results.size() + 1, 2
+  );
+
+  console::printTable(tableData);
   return true;
 }
 
@@ -348,9 +351,9 @@ bool AsteriskManager::createVoicemailBox(const std::string &mailbox,
                                          const std::string &email) {
   std::string mailboxDN = getMailboxDN(mailbox, baseDN);
 
-  std::cout << "Creating Asterisk voicemail box:" << std::endl;
-  std::cout << "  Mailbox: " << mailbox << std::endl;
-  std::cout << "  Mailbox DN: " << mailboxDN << std::endl;
+  console::e("Creating Asterisk voicemail box:");
+  console::e("  Mailbox: {}", mailbox);
+  console::e("  Mailbox DN: {}", mailboxDN);
 
   // Create LDAP mods for AsteriskVoiceMail object class
   std::vector<LDAPMod> mods;
@@ -444,11 +447,11 @@ bool AsteriskManager::createVoicemailBox(const std::string &mailbox,
   modPtrs.push_back(nullptr);
 
   if (!m_connection.addEntry(mailboxDN, modPtrs.data())) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Voicemail box created successfully!" << std::endl;
+  console::e("Voicemail box created successfully!");
   return true;
 }
 
@@ -456,40 +459,51 @@ bool AsteriskManager::deleteVoicemailBox(const std::string &mailbox,
                                          const std::string &baseDN) {
   std::string mailboxDN = getMailboxDN(mailbox, baseDN);
 
-  std::cout << "Deleting Asterisk voicemail box:" << std::endl;
-  std::cout << "  Mailbox: " << mailbox << std::endl;
-  std::cout << "  Mailbox DN: " << mailboxDN << std::endl;
+  console::e("Deleting Asterisk voicemail box:");
+  console::e("  Mailbox: {}", mailbox);
+  console::e("  Mailbox DN: {}", mailboxDN);
 
   if (!m_connection.deleteEntry(mailboxDN)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Voicemail box deleted successfully!" << std::endl;
+  console::e("Voicemail box deleted successfully!");
   return true;
 }
 
 bool AsteriskManager::listVoicemailBoxes(const std::string &baseDN) {
-  std::cout << "Listing Asterisk voicemail boxes:" << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Listing Asterisk voicemail boxes:");
+  console::e("Base DN: {}", baseDN);
 
   std::vector<std::vector<std::pair<std::string, std::string>>> results;
   std::string filter = "(objectClass=AsteriskVoiceMail)";
 
   if (!m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Found " << results.size() << " voicemail boxes:" << std::endl;
+  if (results.empty()) {
+    console::e("No voicemail boxes found.");
+    return true;
+  }
 
-  for (size_t i = 0; i < results.size(); i++) {
-    std::cout << "\nVoicemail Box " << (i + 1) << ":" << std::endl;
-    for (const auto &[attr, value] : results[i]) {
-      std::cout << "  " << attr << ": " << value << std::endl;
+  // Convert results to table format for display
+  std::vector<std::string> flatData;
+  flatData.reserve(results.size() * 2);
+  for (const auto &entry : results) {
+    for (const auto &[attr, value] : entry) {
+      flatData.push_back(attr);
+      flatData.push_back(value);
     }
   }
 
+  std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
+    flatData.data(), results.size() + 1, 2
+  );
+
+  console::printTable(tableData);
   return true;
 }
 

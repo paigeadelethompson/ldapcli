@@ -1,5 +1,6 @@
 #include "OpenLDAPManager.hpp"
 #include "Config.hpp"
+#include "Console.hpp"
 #include <getopt.h>
 #include <iostream>
 #include <sstream>
@@ -9,15 +10,15 @@ OpenLDAPManager::OpenLDAPManager(LDAPConnection &connection)
     : m_connection(connection) {}
 
 void OpenLDAPManager::printUsage() const {
-  std::cout << "OPENLDAP Commands:" << std::endl;
-  std::cout << "  create-ou <ou-name> [base-dn]" << std::endl;
-  std::cout << "  delete-ou <ou-name> [base-dn]" << std::endl;
-  std::cout << "  update-ou <ou-name> [base-dn]" << std::endl;
-  std::cout << "  list-ous [base-dn]" << std::endl;
-  std::cout << "  list-people [base-dn]" << std::endl;
-  std::cout << "  create-person <cn> [base-dn]" << std::endl;
-  std::cout << "  update-person <cn> [base-dn]" << std::endl;
-  std::cout << "  delete-person <cn> [base-dn]" << std::endl;
+  console::e("OPENLDAP Commands:");
+  console::e("  create-ou <ou-name> [base-dn]");
+  console::e("  delete-ou <ou-name> [base-dn]");
+  console::e("  update-ou <ou-name> [base-dn]");
+  console::e("  list-ous [base-dn]");
+  console::e("  list-people [base-dn]");
+  console::e("  create-person <cn> [base-dn]");
+  console::e("  update-person <cn> [base-dn]");
+  console::e("  delete-person <cn> [base-dn]");
 }
 
 std::string OpenLDAPManager::getServiceName() const { return "openldap"; }
@@ -59,17 +60,15 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
         email = optarg;
         break;
       default:
-        std::cerr << "Usage: ldapcli create-ou <ou-name> [-p password] "
-                     "[-f fullname] [-e email]"
-                  << std::endl;
+        console::e("Usage: ldapcli create-ou <ou-name> [-p password] "
+                     "[-f fullname] [-e email]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli create-ou <ou-name> [-p password] "
-                   "[-f fullname] [-e email]"
-                << std::endl;
+      console::e("Usage: ldapcli create-ou <ou-name> [-p password] "
+                   "[-f fullname] [-e email]");
       return false;
     }
 
@@ -78,7 +77,7 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
     return createOrganizationalUnit(ouName, baseDN);
   } else if (command == "delete-ou") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli delete-ou <ou-name>" << std::endl;
+      console::e("Usage: ldapcli delete-ou <ou-name>");
       return false;
     }
 
@@ -87,7 +86,7 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
     return deleteOrganizationalUnit(ouName, baseDN);
   } else if (command == "update-ou") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli update-ou <ou-name>" << std::endl;
+      console::e("Usage: ldapcli update-ou <ou-name>");
       return false;
     }
 
@@ -188,35 +187,32 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
         c = optarg;
         break;
       default:
-        std::cerr << "Usage: ldapcli create-person <cn> [options]" << std::endl;
-        std::cerr << "Options:" << std::endl;
-        std::cerr << "  -u, --uid <uid>           User ID" << std::endl;
-        std::cerr << "  -g, --givenname <name>   Given name" << std::endl;
-        std::cerr << "  -s, --sn <surname>       Surname" << std::endl;
-        std::cerr << "  -m, --mail <email>       Email address" << std::endl;
-        std::cerr << "  -d, --displayname <name> Display name" << std::endl;
-        std::cerr << "  -e, --employeenumber <num> Employee number"
-                  << std::endl;
-        std::cerr << "  -t, --employeetype <type> Employee type" << std::endl;
-        std::cerr << "  -n, --departmentnumber <num> Department number"
-                  << std::endl;
-        std::cerr << "  -M, --mobile <phone>     Mobile phone" << std::endl;
-        std::cerr << "  -H, --homephone <phone>  Home phone" << std::endl;
-        std::cerr << "  -P, --pager <phone>      Pager" << std::endl;
-        std::cerr << "  -i, --title <title>      Job title" << std::endl;
-        std::cerr << "  -l, --telephonenumber <phone> Telephone number"
-                  << std::endl;
-        std::cerr << "  -r, --street <address>   Street address" << std::endl;
-        std::cerr << "  -z, --postalcode <code>  Postal code" << std::endl;
-        std::cerr << "  -L, --l <city>           City" << std::endl;
-        std::cerr << "  -S, --st <state>         State" << std::endl;
-        std::cerr << "  -C, --c <country>        Country" << std::endl;
+        console::e("Usage: ldapcli create-person <cn> [options]");
+        console::e("Options:");
+        console::e("  -u, --uid <uid>           User ID");
+        console::e("  -g, --givenname <name>   Given name");
+        console::e("  -s, --sn <surname>       Surname");
+        console::e("  -m, --mail <email>       Email address");
+        console::e("  -d, --displayname <name> Display name");
+        console::e("  -e, --employeenumber <num> Employee number");
+        console::e("  -t, --employeetype <type> Employee type");
+        console::e("  -n, --departmentnumber <num> Department number");
+        console::e("  -M, --mobile <phone>     Mobile phone");
+        console::e("  -H, --homephone <phone>  Home phone");
+        console::e("  -P, --pager <phone>      Pager");
+        console::e("  -i, --title <title>      Job title");
+        console::e("  -l, --telephonenumber <phone> Telephone number");
+        console::e("  -r, --street <address>   Street address");
+        console::e("  -z, --postalcode <code>  Postal code");
+        console::e("  -L, --l <city>           City");
+        console::e("  -S, --st <state>         State");
+        console::e("  -C, --c <country>        Country");
         return false;
       }
     }
 
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli create-person <cn> [options]" << std::endl;
+      console::e("Usage: ldapcli create-person <cn> [options]");
       return false;
     }
 
@@ -316,35 +312,32 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
         c = optarg;
         break;
       default:
-        std::cerr << "Usage: ldapcli update-person <cn> [options]" << std::endl;
-        std::cerr << "Options:" << std::endl;
-        std::cerr << "  -u, --uid <uid>           User ID" << std::endl;
-        std::cerr << "  -g, --givenname <name>   Given name" << std::endl;
-        std::cerr << "  -s, --sn <surname>       Surname" << std::endl;
-        std::cerr << "  -m, --mail <email>       Email address" << std::endl;
-        std::cerr << "  -d, --displayname <name> Display name" << std::endl;
-        std::cerr << "  -e, --employeenumber <num> Employee number"
-                  << std::endl;
-        std::cerr << "  -t, --employeetype <type> Employee type" << std::endl;
-        std::cerr << "  -n, --departmentnumber <num> Department number"
-                  << std::endl;
-        std::cerr << "  -M, --mobile <phone>     Mobile phone" << std::endl;
-        std::cerr << "  -H, --homephone <phone>  Home phone" << std::endl;
-        std::cerr << "  -P, --pager <phone>      Pager" << std::endl;
-        std::cerr << "  -i, --title <title>      Job title" << std::endl;
-        std::cerr << "  -l, --telephonenumber <phone> Telephone number"
-                  << std::endl;
-        std::cerr << "  -r, --street <address>   Street address" << std::endl;
-        std::cerr << "  -z, --postalcode <code>  Postal code" << std::endl;
-        std::cerr << "  -L, --l <city>           City" << std::endl;
-        std::cerr << "  -S, --st <state>         State" << std::endl;
-        std::cerr << "  -C, --c <country>        Country" << std::endl;
+        console::e("Usage: ldapcli update-person <cn> [options]");
+        console::e("Options:");
+        console::e("  -u, --uid <uid>           User ID");
+        console::e("  -g, --givenname <name>   Given name");
+        console::e("  -s, --sn <surname>       Surname");
+        console::e("  -m, --mail <email>       Email address");
+        console::e("  -d, --displayname <name> Display name");
+        console::e("  -e, --employeenumber <num> Employee number");
+        console::e("  -t, --employeetype <type> Employee type");
+        console::e("  -n, --departmentnumber <num> Department number");
+        console::e("  -M, --mobile <phone>     Mobile phone");
+        console::e("  -H, --homephone <phone>  Home phone");
+        console::e("  -P, --pager <phone>      Pager");
+        console::e("  -i, --title <title>      Job title");
+        console::e("  -l, --telephonenumber <phone> Telephone number");
+        console::e("  -r, --street <address>   Street address");
+        console::e("  -z, --postalcode <code>  Postal code");
+        console::e("  -L, --l <city>           City");
+        console::e("  -S, --st <state>         State");
+        console::e("  -C, --c <country>        Country");
         return false;
       }
     }
 
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli update-person <cn> [options]" << std::endl;
+      console::e("Usage: ldapcli update-person <cn> [options]");
       return false;
     }
 
@@ -356,7 +349,7 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
                         telephoneNumber, street, postalCode, l, st, c);
   } else if (command == "delete-person") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli delete-person <cn>" << std::endl;
+      console::e("Usage: ldapcli delete-person <cn>");
       return false;
     }
 
@@ -370,26 +363,37 @@ bool OpenLDAPManager::execute(int argc, char *argv[]) {
 }
 
 bool OpenLDAPManager::listPeople(const std::string &baseDN) {
-  std::cout << "Listing People:" << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Listing People:");
+  console::e("Base DN: {}", baseDN);
 
   std::vector<std::vector<std::pair<std::string, std::string>>> results;
   std::string filter = "(objectClass=inetOrgPerson)";
 
   if (!m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Found " << results.size() << " People:" << std::endl;
+  if (results.empty()) {
+    console::e("No people found.");
+    return true;
+  }
 
-  for (size_t i = 0; i < results.size(); i++) {
-    std::cout << "\\nPerson " << (i + 1) << ":" << std::endl;
-    for (const auto &[attr, value] : results[i]) {
-      std::cout << "  " << attr << ": " << value << std::endl;
+  // Convert results to table format for display
+  std::vector<std::string> flatData;
+  flatData.reserve(results.size() * 2);
+  for (const auto &entry : results) {
+    for (const auto &[attr, value] : entry) {
+      flatData.push_back(attr);
+      flatData.push_back(value);
     }
   }
 
+  std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
+    flatData.data(), results.size() + 1, 2
+  );
+
+  console::printTable(tableData);
   return true;
 }
 
@@ -405,9 +409,9 @@ bool OpenLDAPManager::createPerson(
     const std::string &l, const std::string &st, const std::string &c) {
   std::string personDN = "cn=" + personName + "," + baseDN;
 
-  std::cout << "Creating Person:" << std::endl;
-  std::cout << "  CN: " << personName << std::endl;
-  std::cout << "  DN: " << personDN << std::endl;
+  console::e("Creating Person:");
+  console::e("  CN: {}", personName);
+  console::e("  DN: {}", personDN);
 
   std::vector<LDAPMod> mods;
 
@@ -629,7 +633,7 @@ bool OpenLDAPManager::createPerson(
     throw std::runtime_error("failed to add entry");
   }
 
-  std::cout << "Person created successfully!" << std::endl;
+  console::e("Person created successfully!");
   return true;
 }
 
@@ -645,9 +649,9 @@ bool OpenLDAPManager::updatePerson(
     const std::string &l, const std::string &st, const std::string &c) {
   std::string personDN = "cn=" + personName + "," + baseDN;
 
-  std::cout << "Updating Person:" << std::endl;
-  std::cout << "  CN: " << personName << std::endl;
-  std::cout << "  DN: " << personDN << std::endl;
+  console::e("Updating Person:");
+  console::e("  CN: {}", personName);
+  console::e("  DN: {}", personDN);
 
   std::vector<LDAPMod> mods;
 
@@ -878,7 +882,7 @@ bool OpenLDAPManager::updatePerson(
     throw std::runtime_error("failed to modify entry");
   }
 
-  std::cout << "Person updated successfully!" << std::endl;
+  console::e("Person updated successfully!");
   return true;
 }
 
@@ -886,16 +890,16 @@ bool OpenLDAPManager::deletePerson(const std::string &personName,
                                    const std::string &baseDN) {
   std::string personDN = "cn=" + personName + "," + baseDN;
 
-  std::cout << "Deleting Person:" << std::endl;
-  std::cout << "  CN: " << personName << std::endl;
-  std::cout << "  DN: " << personDN << std::endl;
+  console::e("Deleting Person:");
+  console::e("  CN: {}", personName);
+  console::e("  DN: {}", personDN);
 
   if (!m_connection.deleteEntry(personDN)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Person deleted successfully!" << std::endl;
+  console::e("Person deleted successfully!");
   return true;
 }
 
@@ -906,9 +910,9 @@ bool OpenLDAPManager::createOrganizationalUnit(const std::string &ouName,
                                                const std::string &email) {
   std::string ouDN = "ou=" + ouName + "," + baseDN;
 
-  std::cout << "Creating Organizational Unit:" << std::endl;
-  std::cout << "  OU Name: " << ouName << std::endl;
-  std::cout << "  OU DN: " << ouDN << std::endl;
+  console::e("Creating Organizational Unit:");
+  console::e("  OU Name: {}", ouName);
+  console::e("  OU DN: {}", ouDN);
 
   std::vector<LDAPMod> mods;
 
@@ -978,7 +982,7 @@ bool OpenLDAPManager::createOrganizationalUnit(const std::string &ouName,
     throw std::runtime_error("failed to add entry");
   }
 
-  std::cout << "Organizational Unit created successfully!" << std::endl;
+  console::e("Organizational Unit created successfully!");
   return true;
 }
 
@@ -986,11 +990,11 @@ bool OpenLDAPManager::updateOrganizationalUnit(const std::string &ouName,
                                                const std::string &baseDN) {
   std::string ouDN = "ou=" + ouName + "," + baseDN;
 
-  std::cout << "Updating Organizational Unit:" << std::endl;
-  std::cout << "  OU Name: " << ouName << std::endl;
-  std::cout << "  OU DN: " << ouDN << std::endl;
+  console::e("Updating Organizational Unit:");
+  console::e("  OU Name: {}", ouName);
+  console::e("  OU DN: {}", ouDN);
 
-  std::cerr << "Update functionality not yet implemented" << std::endl;
+  console::e("Update functionality not yet implemented");
   return false;
 }
 
@@ -998,40 +1002,50 @@ bool OpenLDAPManager::deleteOrganizationalUnit(const std::string &ouName,
                                                const std::string &baseDN) {
   std::string ouDN = "ou=" + ouName + "," + baseDN;
 
-  std::cout << "Deleting Organizational Unit:" << std::endl;
-  std::cout << "  OU Name: " << ouName << std::endl;
-  std::cout << "  OU DN: " << ouDN << std::endl;
+  console::e("Deleting Organizational Unit:");
+  console::e("  OU Name: {}", ouName);
+  console::e("  OU DN: {}", ouDN);
 
   if (!m_connection.deleteEntry(ouDN)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Organizational Unit deleted successfully!" << std::endl;
+  console::e("Organizational Unit deleted successfully!");
   return true;
 }
 
 bool OpenLDAPManager::listOrganizationalUnits(const std::string &baseDN) {
-  std::cout << "Listing Organizational Units:" << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Listing Organizational Units:");
+  console::e("Base DN: {}", baseDN);
 
   std::vector<std::vector<std::pair<std::string, std::string>>> results;
   std::string filter = "(objectClass=organizationalUnit)";
 
   if (!m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Found " << results.size()
-            << " Organizational Units:" << std::endl;
+  if (results.empty()) {
+    console::e("No organizational units found.");
+    return true;
+  }
 
-  for (size_t i = 0; i < results.size(); i++) {
-    std::cout << "\\nOrganizational Unit " << (i + 1) << ":" << std::endl;
-    for (const auto &[attr, value] : results[i]) {
-      std::cout << "  " << attr << ": " << value << std::endl;
+  // Convert results to table format for display
+  std::vector<std::string> flatData;
+  flatData.reserve(results.size() * 2);
+  for (const auto &entry : results) {
+    for (const auto &[attr, value] : entry) {
+      flatData.push_back(attr);
+      flatData.push_back(value);
     }
   }
 
+  std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
+    flatData.data(), results.size() + 1, 2
+  );
+
+  console::printTable(tableData);
   return true;
 }

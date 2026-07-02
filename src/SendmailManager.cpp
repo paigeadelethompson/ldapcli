@@ -1,5 +1,6 @@
 #include "SendmailManager.hpp"
 #include "Config.hpp"
+#include "Console.hpp"
 #include <getopt.h>
 #include <iostream>
 #include <sstream>
@@ -8,11 +9,11 @@ SendmailManager::SendmailManager(LDAPConnection &connection)
     : m_connection(connection) {}
 
 void SendmailManager::printUsage() const {
-  std::cout << "Sendmail Commands:" << std::endl;
-  std::cout << "  create-mta <mta> [base-dn]" << std::endl;
-  std::cout << "  delete-mta <mta> [base-dn]" << std::endl;
-  std::cout << "  update-mta <mta> [base-dn]" << std::endl;
-  std::cout << "  list-mtas [base-dn]" << std::endl;
+  console::e("Sendmail Commands:");
+  console::e("  create-mta <mta> [base-dn]");
+  console::e("  delete-mta <mta> [base-dn]");
+  console::e("  update-mta <mta> [base-dn]");
+  console::e("  list-mtas [base-dn]");
 }
 
 std::string SendmailManager::getServiceName() const { return "sendmail"; }
@@ -49,16 +50,13 @@ bool SendmailManager::execute(int argc, char *argv[]) {
         host = optarg;
         break;
       default:
-        std::cerr
-            << "Usage: ldapcli create-mta <mta-name> [-c cluster] [-h host]"
-            << std::endl;
+        console::e("Usage: ldapcli create-mta <mta-name> [-c cluster] [-h host]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli create-mta <mta-name> [-c cluster] [-h host]"
-                << std::endl;
+      console::e("Usage: ldapcli create-mta <mta-name> [-c cluster] [-h host]");
       return false;
     }
 
@@ -67,7 +65,7 @@ bool SendmailManager::execute(int argc, char *argv[]) {
     return createMTA(mtaName, baseDN);
   } else if (command == "delete-mta") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli delete-mta <mta-name>" << std::endl;
+      console::e("Usage: ldapcli delete-mta <mta-name>");
       return false;
     }
 
@@ -76,7 +74,7 @@ bool SendmailManager::execute(int argc, char *argv[]) {
     return deleteMTA(mtaName, baseDN);
   } else if (command == "update-mta") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli update-mta <mta-name>" << std::endl;
+      console::e("Usage: ldapcli update-mta <mta-name>");
       return false;
     }
 
@@ -86,43 +84,54 @@ bool SendmailManager::execute(int argc, char *argv[]) {
   } else if (command == "list-mtas") {
     return listMTAs(baseDN);
   } else {
-    std::cerr << "Unknown Sendmail command: " << command << std::endl;
+    console::e("Unknown Sendmail command: {}", command);
     printUsage();
     return false;
   }
 }
 
 bool SendmailManager::listMTAs(const std::string &baseDN) {
-  std::cout << "Listing Sendmail MTAs:" << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Listing Sendmail MTAs:");
+  console::e("Base DN: {}", baseDN);
 
   std::vector<std::vector<std::pair<std::string, std::string>>> results;
   std::string filter = "(objectClass=sendmailMTA)";
 
-  if (m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
-    std::cout << "Found " << results.size() << " MTAs:" << std::endl;
+  if (!m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
+    console::e("Error: {}", m_connection.getError());
+    return false;
+  }
 
-    for (size_t i = 0; i < results.size(); i++) {
-      std::cout << "\nMTA " << (i + 1) << ":" << std::endl;
-      for (const auto &[attr, value] : results[i]) {
-        std::cout << "  " << attr << ": " << value << std::endl;
-      }
-    }
-
+  if (results.empty()) {
+    console::e("No MTAs found.");
     return true;
   }
 
-  std::cerr << "Error: " << m_connection.getError() << std::endl;
-  return false;
+  // Convert results to table format for display
+  std::vector<std::string> flatData;
+  flatData.reserve(results.size() * 2);
+  for (const auto &entry : results) {
+    for (const auto &[attr, value] : entry) {
+      flatData.push_back(attr);
+      flatData.push_back(value);
+    }
+  }
+
+  std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
+    flatData.data(), results.size() + 1, 2
+  );
+
+  console::printTable(tableData);
+  return true;
 }
 
 bool SendmailManager::createMTA(const std::string &mtaName,
                                 const std::string &baseDN) {
   std::string mtaDN = getMTADN(mtaName, baseDN);
 
-  std::cout << "Creating Sendmail MTA:" << std::endl;
-  std::cout << "  MTA Name: " << mtaName << std::endl;
-  std::cout << "  MTA DN: " << mtaDN << std::endl;
+  console::e("Creating Sendmail MTA:");
+  console::e("  MTA Name: {}", mtaName);
+  console::e("  MTA DN: {}", mtaDN);
 
   // Create LDAP mods for sendmailMTA object class
   std::vector<LDAPMod> mods;
@@ -184,11 +193,11 @@ bool SendmailManager::createMTA(const std::string &mtaName,
   modPtrs.push_back(nullptr);
 
   if (!m_connection.addEntry(mtaDN, modPtrs.data())) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "MTA created successfully!" << std::endl;
+  console::e("MTA created successfully!");
   return true;
 }
 
@@ -197,9 +206,9 @@ bool SendmailManager::updateMTA(const std::string &mtaName,
                                 char *argv[]) {
   std::string mtaDN = getMTADN(mtaName, baseDN);
 
-  std::cout << "Updating Sendmail MTA:" << std::endl;
-  std::cout << "  MTA Name: " << mtaName << std::endl;
-  std::cout << "  MTA DN: " << mtaDN << std::endl;
+  console::e("Updating Sendmail MTA:");
+  console::e("  MTA Name: {}", mtaName);
+  console::e("  MTA DN: {}", mtaDN);
 
   static struct option long_options[] = {{"cluster", required_argument, 0, 'c'},
                                          {"host", required_argument, 0, 'h'},
@@ -221,15 +230,13 @@ bool SendmailManager::updateMTA(const std::string &mtaName,
       host = optarg;
       break;
     default:
-      std::cerr << "Usage: ldapcli update-mta <mta-name> [-c cluster] [-h host]"
-                << std::endl;
+      console::e("Usage: ldapcli update-mta <mta-name> [-c cluster] [-h host]");
       return false;
     }
   }
 
   if (optind >= argc) {
-    std::cerr << "Usage: ldapcli update-mta <mta-name> [-c cluster] [-h host]"
-              << std::endl;
+    console::e("Usage: ldapcli update-mta <mta-name> [-c cluster] [-h host]");
     return false;
   }
 
@@ -238,12 +245,12 @@ bool SendmailManager::updateMTA(const std::string &mtaName,
   std::string filter = "(cn=" + mtaName + ")";
 
   if (!m_connection.search(mtaDN, LDAP_SCOPE_BASE, filter, results)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
   if (results.empty()) {
-    std::cerr << "Error: MTA not found" << std::endl;
+    console::e("Error: MTA not found");
     return false;
   }
 
@@ -275,7 +282,7 @@ bool SendmailManager::updateMTA(const std::string &mtaName,
   }
 
   if (mods.empty()) {
-    std::cerr << "Error: No attributes specified for update" << std::endl;
+    console::e("Error: No attributes specified for update");
     return false;
   }
 
@@ -287,11 +294,11 @@ bool SendmailManager::updateMTA(const std::string &mtaName,
   modPtrs.push_back(nullptr);
 
   if (!m_connection.modifyEntry(mtaDN, modPtrs.data())) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "MTA updated successfully!" << std::endl;
+  console::e("MTA updated successfully!");
   return true;
 }
 
@@ -299,16 +306,16 @@ bool SendmailManager::deleteMTA(const std::string &mtaName,
                                 const std::string &baseDN) {
   std::string mtaDN = getMTADN(mtaName, baseDN);
 
-  std::cout << "Deleting Sendmail MTA:" << std::endl;
-  std::cout << "  MTA Name: " << mtaName << std::endl;
-  std::cout << "  MTA DN: " << mtaDN << std::endl;
+  console::e("Deleting Sendmail MTA:");
+  console::e("  MTA Name: {}", mtaName);
+  console::e("  MTA DN: {}", mtaDN);
 
   if (!m_connection.deleteEntry(mtaDN)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "MTA deleted successfully!" << std::endl;
+  console::e("MTA deleted successfully!");
   return true;
 }
 

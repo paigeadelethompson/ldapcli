@@ -1,5 +1,6 @@
 #include "OpenDKIMManager.hpp"
 #include "Config.hpp"
+#include "Console.hpp"
 #include <getopt.h>
 #include <iostream>
 #include <sstream>
@@ -8,11 +9,11 @@ OpenDKIMManager::OpenDKIMManager(LDAPConnection &connection)
     : m_connection(connection) {}
 
 void OpenDKIMManager::printUsage() const {
-  std::cout << "OpenDKIM Commands:" << std::endl;
-  std::cout << "  create-identity <identity> [base-dn]" << std::endl;
-  std::cout << "  delete-identity <identity> [base-dn]" << std::endl;
-  std::cout << "  update-identity <identity> [base-dn]" << std::endl;
-  std::cout << "  list-identities [base-dn]" << std::endl;
+  console::e("OpenDKIM Commands:");
+  console::e("  create-identity <identity> [base-dn]");
+  console::e("  delete-identity <identity> [base-dn]");
+  console::e("  update-identity <identity> [base-dn]");
+  console::e("  list-identities [base-dn]");
 }
 
 std::string OpenDKIMManager::getServiceName() const { return "opendkim"; }
@@ -54,17 +55,13 @@ bool OpenDKIMManager::execute(int argc, char *argv[]) {
         domain = optarg;
         break;
       default:
-        std::cerr << "Usage: ldapcli create-identity <identity> [-s selector] "
-                     "[-k key] [-d domain]"
-                  << std::endl;
+        console::e("Usage: ldapcli create-identity <identity> [-s selector] [-k key] [-d domain]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli create-identity <identity> [-s selector] "
-                   "[-k key] [-d domain]"
-                << std::endl;
+      console::e("Usage: ldapcli create-identity <identity> [-s selector] [-k key] [-d domain]");
       return false;
     }
 
@@ -73,7 +70,7 @@ bool OpenDKIMManager::execute(int argc, char *argv[]) {
     return createIdentity(identity, baseDN);
   } else if (command == "delete-identity") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli delete-identity <identity>" << std::endl;
+      console::e("Usage: ldapcli delete-identity <identity>");
       return false;
     }
 
@@ -82,7 +79,7 @@ bool OpenDKIMManager::execute(int argc, char *argv[]) {
     return deleteIdentity(identity, baseDN);
   } else if (command == "update-identity") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli update-identity <identity>" << std::endl;
+      console::e("Usage: ldapcli update-identity <identity>");
       return false;
     }
 
@@ -92,34 +89,45 @@ bool OpenDKIMManager::execute(int argc, char *argv[]) {
   } else if (command == "list-identities") {
     return listIdentities(baseDN);
   } else {
-    std::cerr << "Unknown OpenDKIM command: " << command << std::endl;
+    console::e("Unknown OpenDKIM command: {}", command);
     printUsage();
     return false;
   }
 }
 
 bool OpenDKIMManager::listIdentities(const std::string &baseDN) {
-  std::cout << "Listing OpenDKIM identities:" << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Listing OpenDKIM identities:");
+  console::e("Base DN: {}", baseDN);
 
   std::vector<std::vector<std::pair<std::string, std::string>>> results;
   std::string filter = "(objectClass=*)";
 
-  if (m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
-    std::cout << "Found " << results.size() << " identities:" << std::endl;
+  if (!m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
+    console::e("Error: {}", m_connection.getError());
+    return false;
+  }
 
-    for (size_t i = 0; i < results.size(); i++) {
-      std::cout << "\nIdentity " << (i + 1) << ":" << std::endl;
-      for (const auto &[attr, value] : results[i]) {
-        std::cout << "  " << attr << ": " << value << std::endl;
-      }
-    }
-
+  if (results.empty()) {
+    console::e("No identities found.");
     return true;
   }
 
-  std::cerr << "Error: " << m_connection.getError() << std::endl;
-  return false;
+  // Convert results to table format for display
+  std::vector<std::string> flatData;
+  flatData.reserve(results.size() * 2);
+  for (const auto &entry : results) {
+    for (const auto &[attr, value] : entry) {
+      flatData.push_back(attr);
+      flatData.push_back(value);
+    }
+  }
+
+  std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
+    flatData.data(), results.size() + 1, 2
+  );
+
+  console::printTable(tableData);
+  return true;
 }
 
 bool OpenDKIMManager::createIdentity(const std::string &identity,
@@ -129,9 +137,9 @@ bool OpenDKIMManager::createIdentity(const std::string &identity,
                                      const std::string &domain) {
   std::string identityDN = getIdentityDN(identity, baseDN);
 
-  std::cout << "Creating OpenDKIM identity:" << std::endl;
-  std::cout << "  Identity: " << identity << std::endl;
-  std::cout << "  Identity DN: " << identityDN << std::endl;
+  console::e("Creating OpenDKIM identity:");
+  console::e("  Identity: {}", identity);
+  console::e("  Identity DN: {}", identityDN);
 
   // Create LDAP mods for DKIM object class
   std::vector<LDAPMod> mods;
@@ -204,11 +212,11 @@ bool OpenDKIMManager::createIdentity(const std::string &identity,
   modPtrs.push_back(nullptr);
 
   if (!m_connection.addEntry(identityDN, modPtrs.data())) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Identity created successfully!" << std::endl;
+  console::e("Identity created successfully!");
   return true;
 }
 
@@ -217,9 +225,9 @@ bool OpenDKIMManager::updateIdentity(const std::string &identity,
                                      char *argv[]) {
   std::string identityDN = getIdentityDN(identity, baseDN);
 
-  std::cout << "Updating OpenDKIM identity:" << std::endl;
-  std::cout << "  Identity: " << identity << std::endl;
-  std::cout << "  Identity DN: " << identityDN << std::endl;
+  console::e("Updating OpenDKIM identity:");
+  console::e("  Identity: {}", identity);
+  console::e("  Identity DN: {}", identityDN);
 
   static struct option long_options[] = {
       {"selector", required_argument, 0, 's'},
@@ -247,17 +255,13 @@ bool OpenDKIMManager::updateIdentity(const std::string &identity,
       domain = optarg;
       break;
     default:
-      std::cerr << "Usage: ldapcli update-identity <identity> [-s selector] "
-                   "[-k key] [-d domain]"
-                << std::endl;
+      console::e("Usage: ldapcli update-identity <identity> [-s selector] [-k key] [-d domain]");
       return false;
     }
   }
 
   if (optind >= argc) {
-    std::cerr << "Usage: ldapcli update-identity <identity> [-s selector] [-k "
-                 "key] [-d domain]"
-              << std::endl;
+    console::e("Usage: ldapcli update-identity <identity> [-s selector] [-k key] [-d domain]");
     return false;
   }
 
@@ -266,12 +270,12 @@ bool OpenDKIMManager::updateIdentity(const std::string &identity,
   std::string filter = "(cn=" + identity + ")";
 
   if (!m_connection.search(identityDN, LDAP_SCOPE_BASE, filter, results)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
   if (results.empty()) {
-    std::cerr << "Error: Identity not found" << std::endl;
+    console::e("Error: Identity not found");
     return false;
   }
 
@@ -315,7 +319,7 @@ bool OpenDKIMManager::updateIdentity(const std::string &identity,
   }
 
   if (mods.empty()) {
-    std::cerr << "Error: No attributes specified for update" << std::endl;
+    console::e("Error: No attributes specified for update");
     return false;
   }
 
@@ -327,11 +331,11 @@ bool OpenDKIMManager::updateIdentity(const std::string &identity,
   modPtrs.push_back(nullptr);
 
   if (!m_connection.modifyEntry(identityDN, modPtrs.data())) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Identity updated successfully!" << std::endl;
+  console::e("Identity updated successfully!");
   return true;
 }
 
@@ -339,16 +343,16 @@ bool OpenDKIMManager::deleteIdentity(const std::string &identity,
                                      const std::string &baseDN) {
   std::string identityDN = getIdentityDN(identity, baseDN);
 
-  std::cout << "Deleting OpenDKIM identity:" << std::endl;
-  std::cout << "  Identity: " << identity << std::endl;
-  std::cout << "  Identity DN: " << identityDN << std::endl;
+  console::e("Deleting OpenDKIM identity:");
+  console::e("  Identity: {}", identity);
+  console::e("  Identity DN: {}", identityDN);
 
   if (!m_connection.deleteEntry(identityDN)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Identity deleted successfully!" << std::endl;
+  console::e("Identity deleted successfully!");
   return true;
 }
 

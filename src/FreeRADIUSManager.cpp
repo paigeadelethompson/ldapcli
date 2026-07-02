@@ -1,5 +1,6 @@
 #include "FreeRADIUSManager.hpp"
 #include "Config.hpp"
+#include "Console.hpp"
 #include <iostream>
 #include <sstream>
 
@@ -7,14 +8,14 @@ FreeRADIUSManager::FreeRADIUSManager(LDAPConnection &connection)
     : m_connection(connection) {}
 
 void FreeRADIUSManager::printUsage() const {
-  std::cout << "FreeRADIUS Commands:" << std::endl;
-  std::cout << "  create-client <client> [base-dn]" << std::endl;
-  std::cout << "  delete-client <client> [base-dn]" << std::endl;
-  std::cout << "  update-client <client> [base-dn]" << std::endl;
-  std::cout << "  list-clients [base-dn]" << std::endl;
-  std::cout << "  create-user <username> [base-dn]" << std::endl;
-  std::cout << "  delete-user <username> [base-dn]" << std::endl;
-  std::cout << "  list-users [base-dn]" << std::endl;
+  console::e("FreeRADIUS Commands:");
+  console::e("  create-client <client> [base-dn]");
+  console::e("  delete-client <client> [base-dn]");
+  console::e("  update-client <client> [base-dn]");
+  console::e("  list-clients [base-dn]");
+  console::e("  create-user <username> [base-dn]");
+  console::e("  delete-user <username> [base-dn]");
+  console::e("  list-users [base-dn]");
 }
 
 std::string FreeRADIUSManager::getServiceName() const { return "freeradius"; }
@@ -56,17 +57,13 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
         type = optarg;
         break;
       default:
-        std::cerr << "Usage: ldapcli create-client <client-name> [-s secret] "
-                     "[-n shortname] [-t type]"
-                  << std::endl;
+        console::e("Usage: ldapcli create-client <client-name> [-s secret] [-n shortname] [-t type]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli create-client <client-name> [-s secret] "
-                   "[-n shortname] [-t type]"
-                << std::endl;
+      console::e("Usage: ldapcli create-client <client-name> [-s secret] [-n shortname] [-t type]");
       return false;
     }
 
@@ -75,7 +72,7 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
     return createClient(clientName, baseDN, secret, shortname, type);
   } else if (command == "delete-client") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli delete-client <client-name>" << std::endl;
+      console::e("Usage: ldapcli delete-client <client-name>");
       return false;
     }
 
@@ -84,7 +81,7 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
     return deleteClient(clientName, baseDN);
   } else if (command == "update-client") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli update-client <client-name>" << std::endl;
+      console::e("Usage: ldapcli update-client <client-name>");
       return false;
     }
 
@@ -121,17 +118,13 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
         framedProtocol = optarg;
         break;
       default:
-        std::cerr << "Usage: ldapcli create-user <username> [-p password] "
-                     "[-s service-type] [-f framed-protocol]"
-                  << std::endl;
+        console::e("Usage: ldapcli create-user <username> [-p password] [-s service-type] [-f framed-protocol]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli create-user <username> [-p password] "
-                   "[-s service-type] [-f framed-protocol]"
-                << std::endl;
+      console::e("Usage: ldapcli create-user <username> [-p password] [-s service-type] [-f framed-protocol]");
       return false;
     }
 
@@ -140,7 +133,7 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
     return createUser(username, baseDN, password, serviceType, framedProtocol);
   } else if (command == "delete-user") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli delete-user <username>" << std::endl;
+      console::e("Usage: ldapcli delete-user <username>");
       return false;
     }
 
@@ -162,9 +155,9 @@ bool FreeRADIUSManager::createClient(const std::string &clientName,
                                      const std::string &type) {
   std::string clientDN = getClientDN(clientName, baseDN);
 
-  std::cout << "Creating FreeRADIUS client:" << std::endl;
-  std::cout << "  Client Name: " << clientName << std::endl;
-  std::cout << "  Client DN: " << clientDN << std::endl;
+  console::e("Creating FreeRADIUS client:");
+  console::e("  Client Name: {}", clientName);
+  console::e("  Client DN: {}", clientDN);
 
   // Create LDAP mods for FreeRADIUSClient object class
   std::vector<LDAPMod> mods;
@@ -236,11 +229,11 @@ bool FreeRADIUSManager::createClient(const std::string &clientName,
   modPtrs.push_back(nullptr);
 
   if (!m_connection.addEntry(clientDN, modPtrs.data())) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Client created successfully!" << std::endl;
+  console::e("Client created successfully!");
   return true;
 }
 
@@ -248,12 +241,12 @@ bool FreeRADIUSManager::updateClient(const std::string &clientName,
                                      const std::string &baseDN) {
   std::string clientDN = getClientDN(clientName, baseDN);
 
-  std::cout << "Updating FreeRADIUS client:" << std::endl;
-  std::cout << "  Client Name: " << clientName << std::endl;
-  std::cout << "  Client DN: " << clientDN << std::endl;
+  console::e("Updating FreeRADIUS client:");
+  console::e("  Client Name: {}", clientName);
+  console::e("  Client DN: {}", clientDN);
 
   // TODO: Implement update logic
-  std::cerr << "Update functionality not yet implemented" << std::endl;
+  console::e("Update functionality not yet implemented");
   return false;
 }
 
@@ -261,40 +254,51 @@ bool FreeRADIUSManager::deleteClient(const std::string &clientName,
                                      const std::string &baseDN) {
   std::string clientDN = getClientDN(clientName, baseDN);
 
-  std::cout << "Deleting FreeRADIUS client:" << std::endl;
-  std::cout << "  Client Name: " << clientName << std::endl;
-  std::cout << "  Client DN: " << clientDN << std::endl;
+  console::e("Deleting FreeRADIUS client:");
+  console::e("  Client Name: {}", clientName);
+  console::e("  Client DN: {}", clientDN);
 
   if (!m_connection.deleteEntry(clientDN)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Client deleted successfully!" << std::endl;
+  console::e("Client deleted successfully!");
   return true;
 }
 
 bool FreeRADIUSManager::listClients(const std::string &baseDN) {
-  std::cout << "Listing FreeRADIUS clients:" << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Listing FreeRADIUS clients:");
+  console::e("Base DN: {}", baseDN);
 
   std::vector<std::vector<std::pair<std::string, std::string>>> results;
   std::string filter = "(objectClass=FreeRADIUSClient)";
 
   if (!m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Found " << results.size() << " clients:" << std::endl;
+  if (results.empty()) {
+    console::e("No clients found.");
+    return true;
+  }
 
-  for (size_t i = 0; i < results.size(); i++) {
-    std::cout << "\nClient " << (i + 1) << ":" << std::endl;
-    for (const auto &[attr, value] : results[i]) {
-      std::cout << "  " << attr << ": " << value << std::endl;
+  // Convert results to table format for display
+  std::vector<std::string> flatData;
+  flatData.reserve(results.size() * 2);
+  for (const auto &entry : results) {
+    for (const auto &[attr, value] : entry) {
+      flatData.push_back(attr);
+      flatData.push_back(value);
     }
   }
 
+  std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
+    flatData.data(), results.size() + 1, 2
+  );
+
+  console::printTable(tableData);
   return true;
 }
 
@@ -305,9 +309,9 @@ bool FreeRADIUSManager::createUser(const std::string &username,
                                    const std::string &framedProtocol) {
   std::string userDN = getUserDN(username, baseDN);
 
-  std::cout << "Creating FreeRADIUS user:" << std::endl;
-  std::cout << "  Username: " << username << std::endl;
-  std::cout << "  User DN: " << userDN << std::endl;
+  console::e("Creating FreeRADIUS user:");
+  console::e("  Username: {}", username);
+  console::e("  User DN: {}", userDN);
 
   // Create LDAP mods for FreeRADIUSUser object class
   std::vector<LDAPMod> mods;
@@ -380,11 +384,11 @@ bool FreeRADIUSManager::createUser(const std::string &username,
   modPtrs.push_back(nullptr);
 
   if (!m_connection.addEntry(userDN, modPtrs.data())) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "User created successfully!" << std::endl;
+  console::e("User created successfully!");
   return true;
 }
 
@@ -392,40 +396,51 @@ bool FreeRADIUSManager::deleteUser(const std::string &username,
                                    const std::string &baseDN) {
   std::string userDN = getUserDN(username, baseDN);
 
-  std::cout << "Deleting FreeRADIUS user:" << std::endl;
-  std::cout << "  Username: " << username << std::endl;
-  std::cout << "  User DN: " << userDN << std::endl;
+  console::e("Deleting FreeRADIUS user:");
+  console::e("  Username: {}", username);
+  console::e("  User DN: {}", userDN);
 
   if (!m_connection.deleteEntry(userDN)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "User deleted successfully!" << std::endl;
+  console::e("User deleted successfully!");
   return true;
 }
 
 bool FreeRADIUSManager::listUsers(const std::string &baseDN) {
-  std::cout << "Listing FreeRADIUS users:" << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Listing FreeRADIUS users:");
+  console::e("Base DN: {}", baseDN);
 
   std::vector<std::vector<std::pair<std::string, std::string>>> results;
   std::string filter = "(objectClass=FreeRADIUSUser)";
 
   if (!m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Found " << results.size() << " users:" << std::endl;
+  if (results.empty()) {
+    console::e("No users found.");
+    return true;
+  }
 
-  for (size_t i = 0; i < results.size(); i++) {
-    std::cout << "\nUser " << (i + 1) << ":" << std::endl;
-    for (const auto &[attr, value] : results[i]) {
-      std::cout << "  " << attr << ": " << value << std::endl;
+  // Convert results to table format for display
+  std::vector<std::string> flatData;
+  flatData.reserve(results.size() * 2);
+  for (const auto &entry : results) {
+    for (const auto &[attr, value] : entry) {
+      flatData.push_back(attr);
+      flatData.push_back(value);
     }
   }
 
+  std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
+    flatData.data(), results.size() + 1, 2
+  );
+
+  console::printTable(tableData);
   return true;
 }
 

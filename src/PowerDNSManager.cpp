@@ -1,20 +1,20 @@
 #include "PowerDNSManager.hpp"
 #include "Config.hpp"
-#include <iostream>
+#include "Console.hpp"
 #include <sstream>
 
 PowerDNSManager::PowerDNSManager(LDAPConnection &connection)
     : m_connection(connection) {}
 
 void PowerDNSManager::printUsage() const {
-  std::cout << "DNS Commands:" << std::endl;
-  std::cout << "  create-zone <zone-name> [type] [base-dn]" << std::endl;
-  std::cout << "  delete-zone <zone-name> [base-dn]" << std::endl;
-  std::cout << "  update-zone <zone-name> [base-dn]" << std::endl;
-  std::cout << "  list-zones [base-dn]" << std::endl;
-  std::cout << "  add-record <zone> <name> <type> <value> [ttl]" << std::endl;
-  std::cout << "  delete-record <zone> <name> <type>" << std::endl;
-  std::cout << "  list-records <zone> [base-dn]" << std::endl;
+  console::e("DNS Commands:");
+  console::e("  create-zone <zone-name> [type] [base-dn]");
+  console::e("  delete-zone <zone-name> [base-dn]");
+  console::e("  update-zone <zone-name> [base-dn]");
+  console::e("  list-zones [base-dn]");
+  console::e("  add-record <zone> <name> <type> <value> [ttl]");
+  console::e("  delete-record <zone> <name> <type>");
+  console::e("  list-records <zone> [base-dn]");
 }
 
 std::string PowerDNSManager::getServiceName() const { return "dns"; }
@@ -45,15 +45,13 @@ bool PowerDNSManager::execute(int argc, char *argv[]) {
         type = optarg;
         break;
       default:
-        std::cerr << "Usage: ldapcli create-zone <zone-name> [-t type]"
-                  << std::endl;
+        console::e("Usage: ldapcli create-zone <zone-name> [-t type]");
         return false;
       }
     }
 
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli create-zone <zone-name> [-t type]"
-                << std::endl;
+      console::e("Usage: ldapcli create-zone <zone-name> [-t type]");
       return false;
     }
 
@@ -62,7 +60,7 @@ bool PowerDNSManager::execute(int argc, char *argv[]) {
     return createZone(zoneName, baseDN, type);
   } else if (command == "delete-zone") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli delete-zone <zone-name>" << std::endl;
+      console::e("Usage: ldapcli delete-zone <zone-name>");
       return false;
     }
 
@@ -71,7 +69,7 @@ bool PowerDNSManager::execute(int argc, char *argv[]) {
     return deleteZone(zoneName, baseDN);
   } else if (command == "update-zone") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli update-zone <zone-name>" << std::endl;
+      console::e("Usage: ldapcli update-zone <zone-name>");
       return false;
     }
 
@@ -100,17 +98,13 @@ bool PowerDNSManager::execute(int argc, char *argv[]) {
         ttl = std::atoi(optarg);
         break;
       default:
-        std::cerr
-            << "Usage: ldapcli add-record <zone> <name> <type> <value> [-t ttl]"
-            << std::endl;
+        console::e("Usage: ldapcli add-record <zone> <name> <type> <value> [-t ttl]");
         return false;
       }
     }
 
     if (optind + 3 >= argc) {
-      std::cerr
-          << "Usage: ldapcli add-record <zone> <name> <type> <value> [-t ttl]"
-          << std::endl;
+      console::e("Usage: ldapcli add-record <zone> <name> <type> <value> [-t ttl]");
       return false;
     }
 
@@ -122,8 +116,7 @@ bool PowerDNSManager::execute(int argc, char *argv[]) {
     return addRecord(zone, baseDN, name, type, value, ttl);
   } else if (command == "delete-record") {
     if (optind + 2 >= argc) {
-      std::cerr << "Usage: ldapcli delete-record <zone> <name> <type>"
-                << std::endl;
+      console::e("Usage: ldapcli delete-record <zone> <name> <type>");
       return false;
     }
 
@@ -134,7 +127,7 @@ bool PowerDNSManager::execute(int argc, char *argv[]) {
     return deleteRecord(zone, baseDN, name, type);
   } else if (command == "list-records") {
     if (optind >= argc) {
-      std::cerr << "Usage: ldapcli list-records <zone>" << std::endl;
+      console::e("Usage: ldapcli list-records <zone>");
       return false;
     }
 
@@ -142,50 +135,63 @@ bool PowerDNSManager::execute(int argc, char *argv[]) {
 
     return listRecords(zone, baseDN);
   } else {
-    std::cerr << "Unknown DNS command: " << command << std::endl;
+    console::e("Unknown DNS command: {}", command);
     printUsage();
     return false;
   }
 }
 
 bool PowerDNSManager::listZones(const std::string &baseDN) {
-  std::cout << "Listing PowerDNS zones:" << std::endl;
-  std::cout << "Base DN: " << baseDN << std::endl;
+  console::e("Listing PowerDNS zones:");
+  console::e("Base DN: {}", baseDN);
 
   std::vector<std::vector<std::pair<std::string, std::string>>> results;
   std::string filter = "(objectClass=*)";
 
-  if (m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
-    std::cout << "Found " << results.size() << " zones:" << std::endl;
+  if (!m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
+    console::e("Error: {}", m_connection.getError());
+    return false;
+  }
 
-    for (size_t i = 0; i < results.size(); i++) {
-      std::cout << "\nZone " << (i + 1) << ":" << std::endl;
-      for (const auto &[attr, value] : results[i]) {
-        std::cout << "  " << attr << ": " << value << std::endl;
-      }
-    }
-
+  if (results.empty()) {
+    console::e("No zones found.");
     return true;
   }
 
-  std::cerr << "Error: " << m_connection.getError() << std::endl;
-  return false;
+  console::e("Found {} zones:", results.size());
+
+  // Convert results to table format for display
+  std::vector<std::string> flatData;
+  flatData.reserve(results.size() * 2);
+  for (const auto &entry : results) {
+    for (const auto &[attr, value] : entry) {
+      flatData.push_back(attr);
+      flatData.push_back(value);
+    }
+  }
+
+  std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
+    flatData.data(), results.size() + 1, 2
+  );
+
+  console::printTable(tableData);
+  return true;
 }
 
 bool PowerDNSManager::createZone(const std::string &zoneName,
                                  const std::string &baseDN,
                                  const std::string &type) {
   if (!validateZoneName(zoneName)) {
-    std::cerr << "Error: Invalid zone name format" << std::endl;
+    console::e("Error: Invalid zone name format");
     return false;
   }
 
   std::string zoneDN = getZoneDN(zoneName, baseDN);
 
-  std::cout << "Creating PowerDNS zone:" << std::endl;
-  std::cout << "  Zone Name: " << zoneName << std::endl;
-  std::cout << "  Zone DN: " << zoneDN << std::endl;
-  std::cout << "  Type: " << type << std::endl;
+  console::e("Creating PowerDNS zone:");
+  console::e("  Zone Name: {}", zoneName);
+  console::e("  Zone DN: {}", zoneDN);
+  console::e("  Type: {}", type);
 
   // Create LDAP mods for PdnsDomain object class
   std::vector<LDAPMod> mods;
@@ -223,11 +229,11 @@ bool PowerDNSManager::createZone(const std::string &zoneName,
   modPtrs.push_back(nullptr);
 
   if (!m_connection.addEntry(zoneDN, modPtrs.data())) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Zone created successfully!" << std::endl;
+  console::e("Zone created successfully!");
   return true;
 }
 
@@ -235,14 +241,14 @@ bool PowerDNSManager::updateZone(const std::string &zoneName,
                                  const std::string &baseDN) {
   std::string zoneDN = getZoneDN(zoneName, baseDN);
 
-  std::cout << "Updating PowerDNS zone:" << std::endl;
-  std::cout << "  Zone Name: " << zoneName << std::endl;
-  std::cout << "  Zone DN: " << zoneDN << std::endl;
+  console::e("Updating PowerDNS zone:");
+  console::e("  Zone Name: {}", zoneName);
+  console::e("  Zone DN: {}", zoneDN);
 
   // TODO: Implement zone update logic
   // This would require parsing command line arguments for what to update
 
-  std::cout << "Zone update not yet implemented" << std::endl;
+  console::e("Zone update not yet implemented");
   return true;
 }
 
@@ -250,16 +256,16 @@ bool PowerDNSManager::deleteZone(const std::string &zoneName,
                                  const std::string &baseDN) {
   std::string zoneDN = getZoneDN(zoneName, baseDN);
 
-  std::cout << "Deleting PowerDNS zone:" << std::endl;
-  std::cout << "  Zone Name: " << zoneName << std::endl;
-  std::cout << "  Zone DN: " << zoneDN << std::endl;
+  console::e("Deleting PowerDNS zone:");
+  console::e("  Zone Name: {}", zoneName);
+  console::e("  Zone DN: {}", zoneDN);
 
   if (!m_connection.deleteEntry(zoneDN)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Zone deleted successfully!" << std::endl;
+  console::e("Zone deleted successfully!");
   return true;
 }
 
@@ -270,12 +276,12 @@ bool PowerDNSManager::addRecord(const std::string &zoneName,
                                 const std::string &recordValue, int ttl) {
   std::string zoneDN = getZoneDN(zoneName, baseDN);
 
-  std::cout << "Adding PowerDNS record:" << std::endl;
-  std::cout << "  Zone: " << zoneName << std::endl;
-  std::cout << "  Record Name: " << recordName << std::endl;
-  std::cout << "  Record Type: " << recordType << std::endl;
-  std::cout << "  Record Value: " << recordValue << std::endl;
-  std::cout << "  TTL: " << ttl << std::endl;
+  console::e("Adding PowerDNS record:");
+  console::e("  Zone: {}", zoneName);
+  console::e("  Record Name: {}", recordName);
+  console::e("  Record Type: {}", recordType);
+  console::e("  Record Value: {}", recordValue);
+  console::e("  TTL: {}", ttl);
 
   // Create record DN
   std::string recordDN = "cn=" + recordName + "," + zoneDN;
@@ -349,11 +355,11 @@ bool PowerDNSManager::addRecord(const std::string &zoneName,
   modPtrs.push_back(nullptr);
 
   if (!m_connection.addEntry(recordDN, modPtrs.data())) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Record added successfully!" << std::endl;
+  console::e("Record added successfully!");
   return true;
 }
 
@@ -363,20 +369,20 @@ bool PowerDNSManager::deleteRecord(const std::string &zoneName,
                                    const std::string &recordType) {
   std::string zoneDN = getZoneDN(zoneName, baseDN);
 
-  std::cout << "Deleting PowerDNS record:" << std::endl;
-  std::cout << "  Zone: " << zoneName << std::endl;
-  std::cout << "  Record Name: " << recordName << std::endl;
-  std::cout << "  Record Type: " << recordType << std::endl;
+  console::e("Deleting PowerDNS record:");
+  console::e("  Zone: {}", zoneName);
+  console::e("  Record Name: {}", recordName);
+  console::e("  Record Type: {}", recordType);
 
   // Create record DN
   std::string recordDN = "cn=" + recordName + "," + zoneDN;
 
   if (!m_connection.deleteEntry(recordDN)) {
-    std::cerr << "Error: " << m_connection.getError() << std::endl;
+    console::e("Error: {}", m_connection.getError());
     return false;
   }
 
-  std::cout << "Record deleted successfully!" << std::endl;
+  console::e("Record deleted successfully!");
   return true;
 }
 
@@ -384,27 +390,38 @@ bool PowerDNSManager::listRecords(const std::string &zoneName,
                                   const std::string &baseDN) {
   std::string zoneDN = getZoneDN(zoneName, baseDN);
 
-  std::cout << "Listing PowerDNS records for zone: " << zoneName << std::endl;
-  std::cout << "Zone DN: " << zoneDN << std::endl;
+  console::e("Listing PowerDNS records for zone: {}", zoneName);
+  console::e("Zone DN: {}", zoneDN);
 
   std::vector<std::vector<std::pair<std::string, std::string>>> results;
   std::string filter = "(objectClass=*)";
 
-  if (m_connection.search(zoneDN, LDAP_SCOPE_SUBTREE, filter, results)) {
-    std::cout << "Found " << results.size() << " records:" << std::endl;
+  if (!m_connection.search(zoneDN, LDAP_SCOPE_SUBTREE, filter, results)) {
+    console::e("Error: {}", m_connection.getError());
+    return false;
+  }
 
-    for (size_t i = 0; i < results.size(); i++) {
-      std::cout << "\nRecord " << (i + 1) << ":" << std::endl;
-      for (const auto &[attr, value] : results[i]) {
-        std::cout << "  " << attr << ": " << value << std::endl;
-      }
-    }
-
+  if (results.empty()) {
+    console::e("No records found.");
     return true;
   }
 
-  std::cerr << "Error: " << m_connection.getError() << std::endl;
-  return false;
+  // Convert results to ldif format for display
+  std::vector<std::string> flatData;
+  flatData.reserve(results.size() * 2);
+  for (const auto &entry : results) {
+    for (const auto &[attr, value] : entry) {
+      flatData.push_back(attr);
+      flatData.push_back(value);
+    }
+  }
+
+  std::mdspan<std::string, std::dextents<size_t, 2>> ldifData(
+    flatData.data(), results.size(), 2
+  );
+
+  console::printLdif(ldifData);
+  return true;
 }
 
 std::string PowerDNSManager::getZoneDN(const std::string &zoneName,
