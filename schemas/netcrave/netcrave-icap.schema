@@ -1,0 +1,145 @@
+# Netcrave ICAP Schema Definition
+# This schema defines LDAP object classes for ICAP server integration
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.1
+    NAME 'icapServiceName'
+    DESC 'Name of the ICAP service'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.2
+    NAME 'icapServiceHost'
+    DESC 'Host address of the ICAP service'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.3
+    NAME 'icapServicePort'
+    DESC 'Port number of the ICAP service'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.4
+    NAME 'icapMaxBodySize'
+    DESC 'Maximum body size supported by ICAP service'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.5
+    NAME 'icapPreviewSize'
+    DESC 'Preview size for request modification'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.6
+    NAME 'icapMethodsSupported'
+    DESC 'List of supported ICAP methods'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    MULTI-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.7
+    NAME 'icapAuthenticationType'
+    DESC 'Authentication type required by ICAP service'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.8
+    NAME 'icapKerberosServicePrincipal'
+    DESC 'Kerberos service principal for ICAP authentication'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.9
+    NAME 'icapKerberosKeytab'
+    DESC 'Path to Kerberos keytab file'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.10
+    NAME 'icapAllowAnonymous'
+    DESC 'Whether anonymous ICAP access is allowed'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.11
+    NAME 'icapMaxConnections'
+    DESC 'Maximum concurrent connections allowed'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.12
+    NAME 'icapTransferComplete'
+    DESC 'Whether complete transfer is required'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.13
+    NAME 'icapRequestHeaders'
+    DESC 'Request headers to pass to ICAP service'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    MULTI-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.14
+    NAME 'icapResponseHeaders'
+    DESC 'Response headers to pass from ICAP service'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    MULTI-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.15
+    NAME 'icapAllowHeaders'
+    DESC 'Additional headers to allow in requests'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.15
+    MULTI-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.16
+    NAME 'icapLogRequests'
+    DESC 'Whether to log ICAP requests'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.17
+    NAME 'icapLogRetentionDays'
+    DESC 'Number of days to retain ICAP logs'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.18
+    NAME 'icapAllowICAPAccess'
+    DESC 'Whether a user is allowed to use ICAP service'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.7
+    SINGLE-VALUE )
+
+attributetype ( 1.3.6.1.4.1.37476.2.5.1.19
+    NAME 'icapMaxConnectionsPerUser'
+    DESC 'Maximum concurrent connections for a specific user'
+    SYNTAX 1.3.6.1.4.1.1466.115.121.1.27
+    SINGLE-VALUE )
+
+objectclass ( 1.3.6.1.4.1.37476.2.5.2.1
+    NAME 'icapService'
+    DESC 'ICAP service configuration'
+    SUP top
+    STRUCTURAL
+    MUST ( cn $ icapServiceHost $ icapServicePort )
+    MAY ( icapServiceName $
+          icapMaxBodySize $
+          icapPreviewSize $
+          icapMethodsSupported $
+          icapAuthenticationType $
+          icapKerberosServicePrincipal $
+          icapKerberosKeytab $
+          icapAllowAnonymous $
+          icapMaxConnections $
+          icapTransferComplete $
+          icapRequestHeaders $
+          icapResponseHeaders $
+          icapAllowHeaders $
+          description )
+
+objectclass ( 1.3.6.1.4.1.37476.2.5.2.2
+    NAME 'icapUser'
+    DESC 'ICAP user access control - AUXILIARY object class'
+    SUP top
+    AUXILIARY
+    MAY ( icapAllowICAPAccess $
+          icapMaxConnectionsPerUser )

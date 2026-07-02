@@ -1,0 +1,52 @@
+#ifndef KERBEROS_MANAGER_HPP
+#define KERBEROS_MANAGER_HPP
+
+#include "LDAPConnection.hpp"
+#include "LDAPManagerBase.hpp"
+#include <getopt.h>
+#include <string>
+#include <vector>
+
+class KerberosManager : public LDAPManagerBase {
+public:
+  KerberosManager(LDAPConnection &connection);
+
+  bool listPrincipals(const std::string &baseDN);
+  bool createPrincipal(
+      const std::string &principal, const std::string &baseDN,
+      const std::string &password, const std::string &fullname,
+      const std::string &email, const std::string &canonicalName,
+      const std::string &principalType, const std::string &principalExpiration,
+      const std::string &passwordExpiration, const std::string &ticketFlags,
+      const std::string &maxTicketLife, const std::string &maxRenewableAge,
+      const std::string &lastPwdChange, const std::string &lastSuccessfulAuth,
+      const std::string &lastFailedAuth, const std::string &loginFailedCount,
+      const std::string &principalAliases,
+      const std::string &allowedToDelegateTo,
+      const std::string &principalAuthInd);
+  bool updatePrincipal(
+      const std::string &principal, const std::string &baseDN,
+      const std::string &canonicalName, const std::string &principalType,
+      const std::string &principalExpiration,
+      const std::string &passwordExpiration, const std::string &ticketFlags,
+      const std::string &maxTicketLife, const std::string &maxRenewableAge,
+      const std::string &lastPwdChange, const std::string &lastSuccessfulAuth,
+      const std::string &lastFailedAuth, const std::string &loginFailedCount,
+      const std::string &principalAliases,
+      const std::string &allowedToDelegateTo,
+      const std::string &principalAuthInd);
+  bool deletePrincipal(const std::string &principal, const std::string &baseDN);
+
+  void printUsage() const override;
+  std::string getServiceName() const override;
+
+  bool execute(int argc, char *argv[]) override;
+
+private:
+  LDAPConnection &m_connection;
+
+  std::string getPrincipalDN(const std::string &principal,
+                             const std::string &baseDN) const;
+};
+
+#endif
