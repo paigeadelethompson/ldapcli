@@ -107,8 +107,9 @@ bool OpenDKIMManager::execute(int argc, char *argv[]) {
         domain = optarg;
         break;
       default:
-        console::e("Usage: ldapcli update-identity <identity> [-s selector] [-k "
-                 "key] [-d domain]");
+        console::e(
+            "Usage: ldapcli update-identity <identity> [-s selector] [-k "
+            "key] [-d domain]");
         return false;
       }
     }
@@ -164,11 +165,11 @@ bool OpenDKIMManager::listIdentities(const std::string &baseDN) {
   return true;
 }
 
-bool OpenDKIMManager::createIdentity(
-    const std::string &identity, const std::string &baseDN,
-    const std::optional<std::string> &selector,
-    const std::optional<std::string> &key,
-    const std::optional<std::string> &domain) {
+bool OpenDKIMManager::createIdentity(const std::string &identity,
+                                     const std::string &baseDN,
+                                     const std::optional<std::string> &selector,
+                                     const std::optional<std::string> &key,
+                                     const std::optional<std::string> &domain) {
   std::string identityDN = getIdentityDN(identity, baseDN);
 
   console::e("Creating OpenDKIM identity:");
@@ -245,11 +246,11 @@ bool OpenDKIMManager::createIdentity(
   return true;
 }
 
-bool OpenDKIMManager::updateIdentity(
-    const std::string &identity, const std::string &baseDN,
-    const std::optional<std::string> &selector,
-    const std::optional<std::string> &key,
-    const std::optional<std::string> &domain) {
+bool OpenDKIMManager::updateIdentity(const std::string &identity,
+                                     const std::string &baseDN,
+                                     const std::optional<std::string> &selector,
+                                     const std::optional<std::string> &key,
+                                     const std::optional<std::string> &domain) {
   std::string identityDN = getIdentityDN(identity, baseDN);
 
   console::e("Updating OpenDKIM identity:");
@@ -258,7 +259,8 @@ bool OpenDKIMManager::updateIdentity(
 
   std::vector<LDAPMod> mods;
 
-  auto addReplace = [&](const char *attr, const std::optional<std::string> &val) {
+  auto addReplace = [&](const char *attr,
+                        const std::optional<std::string> &val) {
     if (!val.has_value()) {
       return;
     }

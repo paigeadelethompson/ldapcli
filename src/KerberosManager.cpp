@@ -334,7 +334,8 @@ bool KerberosManager::createPrincipal(
   objectClassMod.mod_type = const_cast<char *>("objectClass");
   objectClassMod.mod_vals.modv_strvals = new char *[3];
   objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("krbPrincipal");
-  objectClassMod.mod_vals.modv_strvals[1] = const_cast<char *>("krbPrincipalAux");
+  objectClassMod.mod_vals.modv_strvals[1] =
+      const_cast<char *>("krbPrincipalAux");
   objectClassMod.mod_vals.modv_strvals[2] = nullptr;
   mods.push_back(objectClassMod);
 
@@ -353,7 +354,8 @@ bool KerberosManager::createPrincipal(
     passwordMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     passwordMod.mod_type = const_cast<char *>("krbPrincipalKey");
     passwordMod.mod_vals.modv_strvals = new char *[2];
-    passwordMod.mod_vals.modv_strvals[0] = const_cast<char *>(password->c_str());
+    passwordMod.mod_vals.modv_strvals[0] =
+        const_cast<char *>(password->c_str());
     passwordMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(passwordMod);
   }
@@ -550,7 +552,8 @@ bool KerberosManager::updatePrincipal(
 
   std::vector<LDAPMod> mods;
 
-  auto addReplace = [&](const char *attr, const std::optional<std::string> &val) {
+  auto addReplace = [&](const char *attr,
+                        const std::optional<std::string> &val) {
     if (!val.has_value()) {
       return;
     }

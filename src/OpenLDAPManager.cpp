@@ -562,7 +562,8 @@ bool OpenLDAPManager::updatePerson(
 
   std::vector<LDAPMod> mods;
 
-  auto addReplace = [&](const char *attr, const std::optional<std::string> &val) {
+  auto addReplace = [&](const char *attr,
+                        const std::optional<std::string> &val) {
     if (!val.has_value()) {
       return;
     }

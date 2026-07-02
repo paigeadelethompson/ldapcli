@@ -283,7 +283,8 @@ bool AsteriskManager::createAccount(const std::string &accountName,
     callerIdMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     callerIdMod.mod_type = const_cast<char *>("AstAccountCallerID");
     callerIdMod.mod_vals.modv_strvals = new char *[2];
-    callerIdMod.mod_vals.modv_strvals[0] = const_cast<char *>(callerId->c_str());
+    callerIdMod.mod_vals.modv_strvals[0] =
+        const_cast<char *>(callerId->c_str());
     callerIdMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(callerIdMod);
   }
@@ -367,7 +368,8 @@ bool AsteriskManager::updateAccount(const std::string &accountName,
     callerIdMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
     callerIdMod.mod_type = const_cast<char *>("AstAccountCallerID");
     callerIdMod.mod_vals.modv_strvals = new char *[2];
-    callerIdMod.mod_vals.modv_strvals[0] = const_cast<char *>(callerId->c_str());
+    callerIdMod.mod_vals.modv_strvals[0] =
+        const_cast<char *>(callerId->c_str());
     callerIdMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(callerIdMod);
   }
@@ -453,11 +455,11 @@ bool AsteriskManager::listAccounts(const std::string &baseDN) {
   return true;
 }
 
-bool AsteriskManager::createVoicemailBox(const std::string &mailbox,
-                                         const std::string &baseDN,
-                                         const std::optional<std::string> &password,
-                                         const std::optional<std::string> &fullname,
-                                         const std::optional<std::string> &email) {
+bool AsteriskManager::createVoicemailBox(
+    const std::string &mailbox, const std::string &baseDN,
+    const std::optional<std::string> &password,
+    const std::optional<std::string> &fullname,
+    const std::optional<std::string> &email) {
   std::string mailboxDN = getMailboxDN(mailbox, baseDN);
 
   console::e("Creating Asterisk voicemail box:");
@@ -507,7 +509,8 @@ bool AsteriskManager::createVoicemailBox(const std::string &mailbox,
     passwordMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     passwordMod.mod_type = const_cast<char *>("AstVoicemailPassword");
     passwordMod.mod_vals.modv_strvals = new char *[2];
-    passwordMod.mod_vals.modv_strvals[0] = const_cast<char *>(password->c_str());
+    passwordMod.mod_vals.modv_strvals[0] =
+        const_cast<char *>(password->c_str());
     passwordMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(passwordMod);
   }
@@ -516,7 +519,8 @@ bool AsteriskManager::createVoicemailBox(const std::string &mailbox,
     fullnameMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     fullnameMod.mod_type = const_cast<char *>("AstVoicemailFullname");
     fullnameMod.mod_vals.modv_strvals = new char *[2];
-    fullnameMod.mod_vals.modv_strvals[0] = const_cast<char *>(fullname->c_str());
+    fullnameMod.mod_vals.modv_strvals[0] =
+        const_cast<char *>(fullname->c_str());
     fullnameMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(fullnameMod);
   }
@@ -546,11 +550,11 @@ bool AsteriskManager::createVoicemailBox(const std::string &mailbox,
   return true;
 }
 
-bool AsteriskManager::updateVoicemailBox(const std::string &mailbox,
-                                         const std::string &baseDN,
-                                         const std::optional<std::string> &password,
-                                         const std::optional<std::string> &fullname,
-                                         const std::optional<std::string> &email) {
+bool AsteriskManager::updateVoicemailBox(
+    const std::string &mailbox, const std::string &baseDN,
+    const std::optional<std::string> &password,
+    const std::optional<std::string> &fullname,
+    const std::optional<std::string> &email) {
   std::string mailboxDN = getMailboxDN(mailbox, baseDN);
 
   console::e("Updating Asterisk voicemail box:");
@@ -566,7 +570,8 @@ bool AsteriskManager::updateVoicemailBox(const std::string &mailbox,
     passwordMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
     passwordMod.mod_type = const_cast<char *>("AstVoicemailPassword");
     passwordMod.mod_vals.modv_strvals = new char *[2];
-    passwordMod.mod_vals.modv_strvals[0] = const_cast<char *>(password->c_str());
+    passwordMod.mod_vals.modv_strvals[0] =
+        const_cast<char *>(password->c_str());
     passwordMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(passwordMod);
   }
@@ -575,7 +580,8 @@ bool AsteriskManager::updateVoicemailBox(const std::string &mailbox,
     fullnameMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
     fullnameMod.mod_type = const_cast<char *>("AstVoicemailFullname");
     fullnameMod.mod_vals.modv_strvals = new char *[2];
-    fullnameMod.mod_vals.modv_strvals[0] = const_cast<char *>(fullname->c_str());
+    fullnameMod.mod_vals.modv_strvals[0] =
+        const_cast<char *>(fullname->c_str());
     fullnameMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(fullnameMod);
   }

@@ -24,23 +24,23 @@ void PowerDNSManager::printUsage() const {
 
 std::string PowerDNSManager::getServiceName() const { return "dns"; }
 
-std::string PowerDNSManager::recordTypeToAttribute(
-    const std::string &recordType) const {
+std::string
+PowerDNSManager::recordTypeToAttribute(const std::string &recordType) const {
   static const std::unordered_map<std::string, std::string> knownTypes = {
-      {"A", "aRecord"},       {"AAAA", "aAAARecord"},
-      {"MX", "mXRecord"},     {"NS", "nSRecord"},
+      {"A", "aRecord"},         {"AAAA", "aAAARecord"},
+      {"MX", "mXRecord"},       {"NS", "nSRecord"},
       {"CNAME", "cNAMERecord"}, {"SOA", "sOARecord"},
-      {"TXT", "tXTRecord"},   {"PTR", "pTRRecord"},
-      {"SRV", "sRVRecord"},   {"CAA", "cAARecord"},
+      {"TXT", "tXTRecord"},     {"PTR", "pTRRecord"},
+      {"SRV", "sRVRecord"},     {"CAA", "cAARecord"},
       {"HINFO", "hInfoRecord"}, {"MINFO", "mInfoRecord"},
-      {"RP", "rPRecord"},     {"AFSDB", "aFSDBRecord"},
-      {"SIG", "SigRecord"},   {"KEY", "KeyRecord"},
-      {"GPOS", "gPosRecord"}, {"LOC", "LocRecord"},
-      {"NXT", "nXTRecord"},   {"NAPTR", "nAPTRRecord"},
-      {"KX", "kXRecord"},     {"CERT", "certRecord"},
-      {"DS", "dSRecord"},     {"SSHFP", "sSHFPRecord"},
-      {"TLSA", "tLSARecord"}, {"SPF", "sPFRecord"},
-      {"URI", "uRIRecord"},   {"ALIAS", "ALIASRecord"},
+      {"RP", "rPRecord"},       {"AFSDB", "aFSDBRecord"},
+      {"SIG", "SigRecord"},     {"KEY", "KeyRecord"},
+      {"GPOS", "gPosRecord"},   {"LOC", "LocRecord"},
+      {"NXT", "nXTRecord"},     {"NAPTR", "nAPTRRecord"},
+      {"KX", "kXRecord"},       {"CERT", "certRecord"},
+      {"DS", "dSRecord"},       {"SSHFP", "sSHFPRecord"},
+      {"TLSA", "tLSARecord"},   {"SPF", "sPFRecord"},
+      {"URI", "uRIRecord"},     {"ALIAS", "ALIASRecord"},
   };
 
   std::string upper = recordType;
@@ -228,8 +228,8 @@ bool PowerDNSManager::execute(int argc, char *argv[]) {
     type = argv[optind + 2];
     value = argv[optind + 3];
 
-    return updateRecord(zone, baseDN, name, type, std::optional<std::string>(value),
-                        ttl);
+    return updateRecord(zone, baseDN, name, type,
+                        std::optional<std::string>(value), ttl);
   } else if (command == "delete-record") {
     if (optind + 2 >= argc) {
       console::e("Usage: ldapcli delete-record <zone> <name> <type>");
@@ -340,8 +340,7 @@ bool PowerDNSManager::createZone(const std::string &zoneName,
     domainTypeMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     domainTypeMod.mod_type = const_cast<char *>("PdnsDomainType");
     domainTypeMod.mod_vals.modv_strvals = new char *[2];
-    domainTypeMod.mod_vals.modv_strvals[0] =
-        const_cast<char *>(type->c_str());
+    domainTypeMod.mod_vals.modv_strvals[0] = const_cast<char *>(type->c_str());
     domainTypeMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(domainTypeMod);
   }
@@ -374,7 +373,8 @@ bool PowerDNSManager::updateZone(
 
   std::vector<LDAPMod> mods;
 
-  auto addReplace = [&](const char *attr, const std::optional<std::string> &val) {
+  auto addReplace = [&](const char *attr,
+                        const std::optional<std::string> &val) {
     if (!val.has_value()) {
       return;
     }
@@ -463,8 +463,7 @@ bool PowerDNSManager::addRecord(const std::string &zoneName,
   objectClassMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
   objectClassMod.mod_vals.modv_strvals = new char *[3];
-  objectClassMod.mod_vals.modv_strvals[0] =
-      const_cast<char *>("dNSDomain2");
+  objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("dNSDomain2");
   objectClassMod.mod_vals.modv_strvals[1] =
       const_cast<char *>("PdnsRecordData");
   objectClassMod.mod_vals.modv_strvals[2] = nullptr;
