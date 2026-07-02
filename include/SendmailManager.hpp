@@ -3,6 +3,8 @@
 
 #include "LDAPConnection.hpp"
 #include "LDAPManagerBase.hpp"
+#include <getopt.h>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -11,9 +13,14 @@ public:
   SendmailManager(LDAPConnection &connection);
 
   bool listMTAs(const std::string &baseDN);
-  bool createMTA(const std::string &mtaName, const std::string &baseDN);
+  bool createMTA(const std::string &mtaName, const std::string &baseDN,
+                 const std::optional<std::string> &cluster,
+                 const std::optional<std::string> &host,
+                 const std::optional<std::string> &description);
   bool updateMTA(const std::string &mtaName, const std::string &baseDN,
-                 int argc, char *argv[]);
+                 const std::optional<std::string> &cluster,
+                 const std::optional<std::string> &host,
+                 const std::optional<std::string> &description);
   bool deleteMTA(const std::string &mtaName, const std::string &baseDN);
 
   void printUsage() const override;

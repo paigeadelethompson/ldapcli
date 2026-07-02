@@ -3,6 +3,8 @@
 
 #include "LDAPConnection.hpp"
 #include "LDAPManagerBase.hpp"
+#include <getopt.h>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -12,11 +14,13 @@ public:
 
   bool listIdentities(const std::string &baseDN);
   bool createIdentity(const std::string &identity, const std::string &baseDN,
-                      const std::string &selector = "",
-                      const std::string &key = "",
-                      const std::string &domain = "");
+                      const std::optional<std::string> &selector,
+                      const std::optional<std::string> &key,
+                      const std::optional<std::string> &domain);
   bool updateIdentity(const std::string &identity, const std::string &baseDN,
-                      int argc, char *argv[]);
+                      const std::optional<std::string> &selector,
+                      const std::optional<std::string> &key,
+                      const std::optional<std::string> &domain);
   bool deleteIdentity(const std::string &identity, const std::string &baseDN);
 
   void printUsage() const override;

@@ -4,6 +4,7 @@
 #include "LDAPConnection.hpp"
 #include "LDAPManagerBase.hpp"
 #include <getopt.h>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -13,15 +14,29 @@ public:
 
   bool listClients(const std::string &baseDN);
   bool createClient(const std::string &clientName, const std::string &baseDN,
-                    const std::string &secret, const std::string &shortname,
-                    const std::string &type);
-  bool updateClient(const std::string &clientName, const std::string &baseDN);
+                    const std::optional<std::string> &secret,
+                    const std::optional<std::string> &shortname,
+                    const std::optional<std::string> &virtualServer,
+                    const std::optional<std::string> &type,
+                    const std::optional<bool> &requireMa,
+                    const std::optional<std::string> &comment);
+  bool updateClient(const std::string &clientName, const std::string &baseDN,
+                    const std::optional<std::string> &secret,
+                    const std::optional<std::string> &shortname,
+                    const std::optional<std::string> &virtualServer,
+                    const std::optional<std::string> &type,
+                    const std::optional<bool> &requireMa,
+                    const std::optional<std::string> &comment);
   bool deleteClient(const std::string &clientName, const std::string &baseDN);
   bool listUsers(const std::string &baseDN);
   bool createUser(const std::string &username, const std::string &baseDN,
-                  const std::string &password, const std::string &serviceType,
-                  const std::string &framedProtocol);
-  bool updateUser(const std::string &username, const std::string &baseDN);
+                  const std::optional<std::string> &password,
+                  const std::optional<std::string> &serviceType,
+                  const std::optional<std::string> &framedProtocol);
+  bool updateUser(const std::string &username, const std::string &baseDN,
+                  const std::optional<std::string> &password,
+                  const std::optional<std::string> &serviceType,
+                  const std::optional<std::string> &framedProtocol);
   bool deleteUser(const std::string &username, const std::string &baseDN);
 
   void printUsage() const override;

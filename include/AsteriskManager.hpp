@@ -4,6 +4,7 @@
 #include "LDAPConnection.hpp"
 #include "LDAPManagerBase.hpp"
 #include <getopt.h>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -13,15 +14,23 @@ public:
 
   bool listAccounts(const std::string &baseDN);
   bool createAccount(const std::string &accountName, const std::string &baseDN,
-                     const std::string &secret, const std::string &callerId,
-                     const std::string &mailbox);
-  bool updateAccount(const std::string &accountName, const std::string &baseDN);
+                     const std::optional<std::string> &secret,
+                     const std::optional<std::string> &callerId,
+                     const std::optional<std::string> &mailbox);
+  bool updateAccount(const std::string &accountName, const std::string &baseDN,
+                     const std::optional<std::string> &secret,
+                     const std::optional<std::string> &callerId,
+                     const std::optional<std::string> &mailbox);
   bool deleteAccount(const std::string &accountName, const std::string &baseDN);
   bool listVoicemailBoxes(const std::string &baseDN);
   bool createVoicemailBox(const std::string &mailbox, const std::string &baseDN,
-                          const std::string &password,
-                          const std::string &fullname,
-                          const std::string &email);
+                          const std::optional<std::string> &password,
+                          const std::optional<std::string> &fullname,
+                          const std::optional<std::string> &email);
+  bool updateVoicemailBox(const std::string &mailbox, const std::string &baseDN,
+                          const std::optional<std::string> &password,
+                          const std::optional<std::string> &fullname,
+                          const std::optional<std::string> &email);
   bool deleteVoicemailBox(const std::string &mailbox,
                           const std::string &baseDN);
 

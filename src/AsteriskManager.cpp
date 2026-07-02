@@ -9,10 +9,11 @@ AsteriskManager::AsteriskManager(LDAPConnection &connection)
 void AsteriskManager::printUsage() const {
   console::e("Asterisk Commands:");
   console::e("  create-account <account> [base-dn]");
-  console::e("  delete-account <account> [base-dn]");
   console::e("  update-account <account> [base-dn]");
+  console::e("  delete-account <account> [base-dn]");
   console::e("  list-accounts [base-dn]");
   console::e("  create-voicemail <mailbox> [base-dn]");
+  console::e("  update-voicemail <mailbox> [base-dn]");
   console::e("  delete-voicemail <mailbox> [base-dn]");
   console::e("  list-voicemail [base-dn]");
 }
@@ -81,14 +82,48 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
 
     return deleteAccount(accountName, baseDN);
   } else if (command == "update-account") {
+    static struct option long_options[] = {
+        {"secret", required_argument, 0, 's'},
+        {"caller-id", required_argument, 0, 'c'},
+        {"mailbox", required_argument, 0, 'm'},
+        {0, 0, 0, 0}};
+
+    std::string accountName;
+    std::optional<std::string> secret;
+    std::optional<std::string> callerId;
+    std::optional<std::string> mailbox;
+
+    int opt;
+    int option_index = 0;
+
+    while ((opt = getopt_long(argc, argv, "s:c:m:", long_options,
+                              &option_index)) != -1) {
+      switch (opt) {
+      case 's':
+        secret = optarg;
+        break;
+      case 'c':
+        callerId = optarg;
+        break;
+      case 'm':
+        mailbox = optarg;
+        break;
+      default:
+        console::e("Usage: ldapcli update-account <account-name> [-s secret] "
+                   "[-c caller-id] [-m mailbox]");
+        return false;
+      }
+    }
+
     if (optind >= argc) {
-      console::e("Usage: ldapcli update-account <account-name>");
+      console::e("Usage: ldapcli update-account <account-name> [-s secret] [-c "
+                 "caller-id] [-m mailbox]");
       return false;
     }
 
-    std::string accountName = argv[optind];
+    accountName = argv[optind];
 
-    return updateAccount(accountName, baseDN);
+    return updateAccount(accountName, baseDN, secret, callerId, mailbox);
   } else if (command == "list-accounts") {
     return listAccounts(baseDN);
   } else if (command == "create-voicemail") {
@@ -99,9 +134,9 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
         {0, 0, 0, 0}};
 
     std::string mailbox;
-    std::string password;
-    std::string fullname;
-    std::string email;
+    std::optional<std::string> password;
+    std::optional<std::string> fullname;
+    std::optional<std::string> email;
 
     int opt;
     int option_index = 0;
@@ -134,6 +169,49 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
     mailbox = argv[optind];
 
     return createVoicemailBox(mailbox, baseDN, password, fullname, email);
+  } else if (command == "update-voicemail") {
+    static struct option long_options[] = {
+        {"password", required_argument, 0, 'p'},
+        {"fullname", required_argument, 0, 'f'},
+        {"email", required_argument, 0, 'e'},
+        {0, 0, 0, 0}};
+
+    std::string mailbox;
+    std::optional<std::string> password;
+    std::optional<std::string> fullname;
+    std::optional<std::string> email;
+
+    int opt;
+    int option_index = 0;
+
+    while ((opt = getopt_long(argc, argv, "p:f:e:", long_options,
+                              &option_index)) != -1) {
+      switch (opt) {
+      case 'p':
+        password = optarg;
+        break;
+      case 'f':
+        fullname = optarg;
+        break;
+      case 'e':
+        email = optarg;
+        break;
+      default:
+        console::e("Usage: ldapcli update-voicemail <mailbox> [-p password] "
+                   "[-f fullname] [-e email]");
+        return false;
+      }
+    }
+
+    if (optind >= argc) {
+      console::e("Usage: ldapcli update-voicemail <mailbox> [-p password] [-f "
+                 "fullname] [-e email]");
+      return false;
+    }
+
+    mailbox = argv[optind];
+
+    return updateVoicemailBox(mailbox, baseDN, password, fullname, email);
   } else if (command == "delete-voicemail") {
     if (optind >= argc) {
       console::e("Usage: ldapcli delete-voicemail <mailbox>");
@@ -153,9 +231,9 @@ bool AsteriskManager::execute(int argc, char *argv[]) {
 
 bool AsteriskManager::createAccount(const std::string &accountName,
                                     const std::string &baseDN,
-                                    const std::string &secret,
-                                    const std::string &callerId,
-                                    const std::string &mailbox) {
+                                    const std::optional<std::string> &secret,
+                                    const std::optional<std::string> &callerId,
+                                    const std::optional<std::string> &mailbox) {
   std::string accountDN = getAccountDN(accountName, baseDN);
 
   console::e("Creating Asterisk account:");
@@ -167,104 +245,81 @@ bool AsteriskManager::createAccount(const std::string &accountName,
 
   // Required attributes
   LDAPMod cnMod;
-  cnMod.mod_op = LDAP_MOD_ADD;
+  cnMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   cnMod.mod_type = const_cast<char *>("cn");
-  cnMod.mod_vals.modv_bvals = new struct berval *[2];
-  cnMod.mod_vals.modv_bvals[0] = new struct berval;
-  cnMod.mod_vals.modv_bvals[0]->bv_len = accountName.length();
-  cnMod.mod_vals.modv_bvals[0]->bv_val =
-      const_cast<char *>(accountName.c_str());
-  cnMod.mod_vals.modv_bvals[1] = nullptr;
+  cnMod.mod_vals.modv_strvals = new char *[2];
+  cnMod.mod_vals.modv_strvals[0] = const_cast<char *>(accountName.c_str());
+  cnMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(cnMod);
 
   LDAPMod extMod;
-  extMod.mod_op = LDAP_MOD_ADD;
+  extMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   extMod.mod_type = const_cast<char *>("objectClass");
-  extMod.mod_vals.modv_bvals = new struct berval *[2];
-  extMod.mod_vals.modv_bvals[0] = new struct berval;
-  extMod.mod_vals.modv_bvals[0]->bv_len = 21;
-  extMod.mod_vals.modv_bvals[0]->bv_val =
-      const_cast<char *>("AsteriskExtension");
-  extMod.mod_vals.modv_bvals[1] = nullptr;
+  extMod.mod_vals.modv_strvals = new char *[2];
+  extMod.mod_vals.modv_strvals[0] = const_cast<char *>("AsteriskExtension");
+  extMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(extMod);
 
   LDAPMod sipMod;
-  sipMod.mod_op = LDAP_MOD_ADD;
+  sipMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   sipMod.mod_type = const_cast<char *>("objectClass");
-  sipMod.mod_vals.modv_bvals = new struct berval *[2];
-  sipMod.mod_vals.modv_bvals[0] = new struct berval;
-  sipMod.mod_vals.modv_bvals[0]->bv_len = 16;
-  sipMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>("AsteriskSIPUser");
-  sipMod.mod_vals.modv_bvals[1] = nullptr;
+  sipMod.mod_vals.modv_strvals = new char *[2];
+  sipMod.mod_vals.modv_strvals[0] = const_cast<char *>("AsteriskSIPUser");
+  sipMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(sipMod);
 
   // Optional attributes
-  if (!secret.empty()) {
+  if (secret.has_value()) {
     LDAPMod secretMod;
-    secretMod.mod_op = LDAP_MOD_ADD;
+    secretMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     secretMod.mod_type = const_cast<char *>("AstMD5secret");
-    secretMod.mod_vals.modv_bvals = new struct berval *[2];
-    secretMod.mod_vals.modv_bvals[0] = new struct berval;
-    secretMod.mod_vals.modv_bvals[0]->bv_len = secret.length();
-    secretMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(secret.c_str());
-    secretMod.mod_vals.modv_bvals[1] = nullptr;
+    secretMod.mod_vals.modv_strvals = new char *[2];
+    secretMod.mod_vals.modv_strvals[0] = const_cast<char *>(secret->c_str());
+    secretMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(secretMod);
   }
-  if (!callerId.empty()) {
+  if (callerId.has_value()) {
     LDAPMod callerIdMod;
-    callerIdMod.mod_op = LDAP_MOD_ADD;
-    callerIdMod.mod_type = const_cast<char *>("AstCallerID");
-    callerIdMod.mod_vals.modv_bvals = new struct berval *[2];
-    callerIdMod.mod_vals.modv_bvals[0] = new struct berval;
-    callerIdMod.mod_vals.modv_bvals[0]->bv_len = callerId.length();
-    callerIdMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(callerId.c_str());
-    callerIdMod.mod_vals.modv_bvals[1] = nullptr;
+    callerIdMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    callerIdMod.mod_type = const_cast<char *>("AstAccountCallerID");
+    callerIdMod.mod_vals.modv_strvals = new char *[2];
+    callerIdMod.mod_vals.modv_strvals[0] = const_cast<char *>(callerId->c_str());
+    callerIdMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(callerIdMod);
   }
-  if (!mailbox.empty()) {
+  if (mailbox.has_value()) {
     LDAPMod mailboxMod;
-    mailboxMod.mod_op = LDAP_MOD_ADD;
-    mailboxMod.mod_type = const_cast<char *>("AstMailbox");
-    mailboxMod.mod_vals.modv_bvals = new struct berval *[2];
-    mailboxMod.mod_vals.modv_bvals[0] = new struct berval;
-    mailboxMod.mod_vals.modv_bvals[0]->bv_len = mailbox.length();
-    mailboxMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(mailbox.c_str());
-    mailboxMod.mod_vals.modv_bvals[1] = nullptr;
+    mailboxMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    mailboxMod.mod_type = const_cast<char *>("AstAccountMailbox");
+    mailboxMod.mod_vals.modv_strvals = new char *[2];
+    mailboxMod.mod_vals.modv_strvals[0] = const_cast<char *>(mailbox->c_str());
+    mailboxMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(mailboxMod);
   }
 
   // Default attributes
   LDAPMod typeMod;
-  typeMod.mod_op = LDAP_MOD_ADD;
+  typeMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   typeMod.mod_type = const_cast<char *>("AstAccountType");
-  typeMod.mod_vals.modv_bvals = new struct berval *[2];
-  typeMod.mod_vals.modv_bvals[0] = new struct berval;
-  typeMod.mod_vals.modv_bvals[0]->bv_len = 5;
-  typeMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>("friend");
-  typeMod.mod_vals.modv_bvals[1] = nullptr;
+  typeMod.mod_vals.modv_strvals = new char *[2];
+  typeMod.mod_vals.modv_strvals[0] = const_cast<char *>("friend");
+  typeMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(typeMod);
 
   LDAPMod hostMod;
-  hostMod.mod_op = LDAP_MOD_ADD;
+  hostMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   hostMod.mod_type = const_cast<char *>("AstAccountHost");
-  hostMod.mod_vals.modv_bvals = new struct berval *[2];
-  hostMod.mod_vals.modv_bvals[0] = new struct berval;
-  hostMod.mod_vals.modv_bvals[0]->bv_len = 7;
-  hostMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>("dynamic");
-  hostMod.mod_vals.modv_bvals[1] = nullptr;
+  hostMod.mod_vals.modv_strvals = new char *[2];
+  hostMod.mod_vals.modv_strvals[0] = const_cast<char *>("dynamic");
+  hostMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(hostMod);
 
   LDAPMod contextMod;
-  contextMod.mod_op = LDAP_MOD_ADD;
+  contextMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   contextMod.mod_type = const_cast<char *>("AstAccountContext");
-  contextMod.mod_vals.modv_bvals = new struct berval *[2];
-  contextMod.mod_vals.modv_bvals[0] = new struct berval;
-  contextMod.mod_vals.modv_bvals[0]->bv_len = 7;
-  contextMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>("default");
-  contextMod.mod_vals.modv_bvals[1] = nullptr;
+  contextMod.mod_vals.modv_strvals = new char *[2];
+  contextMod.mod_vals.modv_strvals[0] = const_cast<char *>("default");
+  contextMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(contextMod);
 
   // Convert mods to LDAPMod**
@@ -284,16 +339,67 @@ bool AsteriskManager::createAccount(const std::string &accountName,
 }
 
 bool AsteriskManager::updateAccount(const std::string &accountName,
-                                    const std::string &baseDN) {
+                                    const std::string &baseDN,
+                                    const std::optional<std::string> &secret,
+                                    const std::optional<std::string> &callerId,
+                                    const std::optional<std::string> &mailbox) {
   std::string accountDN = getAccountDN(accountName, baseDN);
 
   console::e("Updating Asterisk account:");
   console::e("  Account Name: {}", accountName);
   console::e("  Account DN: {}", accountDN);
 
-  // TODO: Implement update logic with command line arguments
-  console::e("Update functionality not yet implemented");
-  return false;
+  // Create LDAP mods for AsteriskSIPUser object class
+  std::vector<LDAPMod> mods;
+
+  // Optional attributes
+  if (secret.has_value()) {
+    LDAPMod secretMod;
+    secretMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    secretMod.mod_type = const_cast<char *>("AstMD5secret");
+    secretMod.mod_vals.modv_strvals = new char *[2];
+    secretMod.mod_vals.modv_strvals[0] = const_cast<char *>(secret->c_str());
+    secretMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(secretMod);
+  }
+  if (callerId.has_value()) {
+    LDAPMod callerIdMod;
+    callerIdMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    callerIdMod.mod_type = const_cast<char *>("AstAccountCallerID");
+    callerIdMod.mod_vals.modv_strvals = new char *[2];
+    callerIdMod.mod_vals.modv_strvals[0] = const_cast<char *>(callerId->c_str());
+    callerIdMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(callerIdMod);
+  }
+  if (mailbox.has_value()) {
+    LDAPMod mailboxMod;
+    mailboxMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    mailboxMod.mod_type = const_cast<char *>("AstAccountMailbox");
+    mailboxMod.mod_vals.modv_strvals = new char *[2];
+    mailboxMod.mod_vals.modv_strvals[0] = const_cast<char *>(mailbox->c_str());
+    mailboxMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(mailboxMod);
+  }
+
+  if (mods.empty()) {
+    console::e("No attributes to update.");
+    return false;
+  }
+
+  // Convert mods to LDAPMod**
+  std::vector<LDAPMod *> modPtrs;
+  for (auto &mod : mods) {
+    modPtrs.push_back(&mod);
+  }
+  modPtrs.push_back(nullptr);
+
+  if (!m_connection.modifyEntry(accountDN, modPtrs.data())) {
+    console::e("Error: {}", m_connection.getError());
+    return false;
+  }
+
+  console::e("Account updated successfully!");
+  return true;
 }
 
 bool AsteriskManager::deleteAccount(const std::string &accountName,
@@ -349,9 +455,9 @@ bool AsteriskManager::listAccounts(const std::string &baseDN) {
 
 bool AsteriskManager::createVoicemailBox(const std::string &mailbox,
                                          const std::string &baseDN,
-                                         const std::string &password,
-                                         const std::string &fullname,
-                                         const std::string &email) {
+                                         const std::optional<std::string> &password,
+                                         const std::optional<std::string> &fullname,
+                                         const std::optional<std::string> &email) {
   std::string mailboxDN = getMailboxDN(mailbox, baseDN);
 
   console::e("Creating Asterisk voicemail box:");
@@ -363,84 +469,66 @@ bool AsteriskManager::createVoicemailBox(const std::string &mailbox,
 
   // Required attributes
   LDAPMod cnMod;
-  cnMod.mod_op = LDAP_MOD_ADD;
+  cnMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   cnMod.mod_type = const_cast<char *>("cn");
-  cnMod.mod_vals.modv_bvals = new struct berval *[2];
-  cnMod.mod_vals.modv_bvals[0] = new struct berval;
-  cnMod.mod_vals.modv_bvals[0]->bv_len = mailbox.length();
-  cnMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>(mailbox.c_str());
-  cnMod.mod_vals.modv_bvals[1] = nullptr;
+  cnMod.mod_vals.modv_strvals = new char *[2];
+  cnMod.mod_vals.modv_strvals[0] = const_cast<char *>(mailbox.c_str());
+  cnMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(cnMod);
 
   LDAPMod extMod;
-  extMod.mod_op = LDAP_MOD_ADD;
+  extMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   extMod.mod_type = const_cast<char *>("objectClass");
-  extMod.mod_vals.modv_bvals = new struct berval *[2];
-  extMod.mod_vals.modv_bvals[0] = new struct berval;
-  extMod.mod_vals.modv_bvals[0]->bv_len = 21;
-  extMod.mod_vals.modv_bvals[0]->bv_val =
-      const_cast<char *>("AsteriskExtension");
-  extMod.mod_vals.modv_bvals[1] = nullptr;
+  extMod.mod_vals.modv_strvals = new char *[2];
+  extMod.mod_vals.modv_strvals[0] = const_cast<char *>("AsteriskExtension");
+  extMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(extMod);
 
   LDAPMod vmMod;
-  vmMod.mod_op = LDAP_MOD_ADD;
+  vmMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   vmMod.mod_type = const_cast<char *>("objectClass");
-  vmMod.mod_vals.modv_bvals = new struct berval *[2];
-  vmMod.mod_vals.modv_bvals[0] = new struct berval;
-  vmMod.mod_vals.modv_bvals[0]->bv_len = 16;
-  vmMod.mod_vals.modv_bvals[0]->bv_val =
-      const_cast<char *>("AsteriskVoiceMail");
-  vmMod.mod_vals.modv_bvals[1] = nullptr;
+  vmMod.mod_vals.modv_strvals = new char *[2];
+  vmMod.mod_vals.modv_strvals[0] = const_cast<char *>("AsteriskVoiceMail");
+  vmMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(vmMod);
 
+  // Required attribute
+  LDAPMod contextMod;
+  contextMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  contextMod.mod_type = const_cast<char *>("AstVoicemailContext");
+  contextMod.mod_vals.modv_strvals = new char *[2];
+  contextMod.mod_vals.modv_strvals[0] = const_cast<char *>("default");
+  contextMod.mod_vals.modv_strvals[1] = nullptr;
+  mods.push_back(contextMod);
+
   // Optional attributes
-  if (!password.empty()) {
+  if (password.has_value()) {
     LDAPMod passwordMod;
-    passwordMod.mod_op = LDAP_MOD_ADD;
+    passwordMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     passwordMod.mod_type = const_cast<char *>("AstVoicemailPassword");
-    passwordMod.mod_vals.modv_bvals = new struct berval *[2];
-    passwordMod.mod_vals.modv_bvals[0] = new struct berval;
-    passwordMod.mod_vals.modv_bvals[0]->bv_len = password.length();
-    passwordMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(password.c_str());
-    passwordMod.mod_vals.modv_bvals[1] = nullptr;
+    passwordMod.mod_vals.modv_strvals = new char *[2];
+    passwordMod.mod_vals.modv_strvals[0] = const_cast<char *>(password->c_str());
+    passwordMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(passwordMod);
   }
-  if (!fullname.empty()) {
+  if (fullname.has_value()) {
     LDAPMod fullnameMod;
-    fullnameMod.mod_op = LDAP_MOD_ADD;
-    fullnameMod.mod_type = const_cast<char *>("AstVoicemailUser");
-    fullnameMod.mod_vals.modv_bvals = new struct berval *[2];
-    fullnameMod.mod_vals.modv_bvals[0] = new struct berval;
-    fullnameMod.mod_vals.modv_bvals[0]->bv_len = fullname.length();
-    fullnameMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(fullname.c_str());
-    fullnameMod.mod_vals.modv_bvals[1] = nullptr;
+    fullnameMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    fullnameMod.mod_type = const_cast<char *>("AstVoicemailFullname");
+    fullnameMod.mod_vals.modv_strvals = new char *[2];
+    fullnameMod.mod_vals.modv_strvals[0] = const_cast<char *>(fullname->c_str());
+    fullnameMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(fullnameMod);
   }
-  if (!email.empty()) {
+  if (email.has_value()) {
     LDAPMod emailMod;
-    emailMod.mod_op = LDAP_MOD_ADD;
+    emailMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     emailMod.mod_type = const_cast<char *>("AstVoicemailEmail");
-    emailMod.mod_vals.modv_bvals = new struct berval *[2];
-    emailMod.mod_vals.modv_bvals[0] = new struct berval;
-    emailMod.mod_vals.modv_bvals[0]->bv_len = email.length();
-    emailMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>(email.c_str());
-    emailMod.mod_vals.modv_bvals[1] = nullptr;
+    emailMod.mod_vals.modv_strvals = new char *[2];
+    emailMod.mod_vals.modv_strvals[0] = const_cast<char *>(email->c_str());
+    emailMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(emailMod);
   }
-
-  // Default attributes
-  LDAPMod contextMod;
-  contextMod.mod_op = LDAP_MOD_ADD;
-  contextMod.mod_type = const_cast<char *>("AstVoicemailContext");
-  contextMod.mod_vals.modv_bvals = new struct berval *[2];
-  contextMod.mod_vals.modv_bvals[0] = new struct berval;
-  contextMod.mod_vals.modv_bvals[0]->bv_len = 7;
-  contextMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>("default");
-  contextMod.mod_vals.modv_bvals[1] = nullptr;
-  mods.push_back(contextMod);
 
   // Convert mods to LDAPMod**
   std::vector<LDAPMod *> modPtrs;
@@ -455,6 +543,70 @@ bool AsteriskManager::createVoicemailBox(const std::string &mailbox,
   }
 
   console::e("Voicemail box created successfully!");
+  return true;
+}
+
+bool AsteriskManager::updateVoicemailBox(const std::string &mailbox,
+                                         const std::string &baseDN,
+                                         const std::optional<std::string> &password,
+                                         const std::optional<std::string> &fullname,
+                                         const std::optional<std::string> &email) {
+  std::string mailboxDN = getMailboxDN(mailbox, baseDN);
+
+  console::e("Updating Asterisk voicemail box:");
+  console::e("  Mailbox: {}", mailbox);
+  console::e("  Mailbox DN: {}", mailboxDN);
+
+  // Create LDAP mods for AsteriskVoiceMail object class
+  std::vector<LDAPMod> mods;
+
+  // Optional attributes
+  if (password.has_value()) {
+    LDAPMod passwordMod;
+    passwordMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    passwordMod.mod_type = const_cast<char *>("AstVoicemailPassword");
+    passwordMod.mod_vals.modv_strvals = new char *[2];
+    passwordMod.mod_vals.modv_strvals[0] = const_cast<char *>(password->c_str());
+    passwordMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(passwordMod);
+  }
+  if (fullname.has_value()) {
+    LDAPMod fullnameMod;
+    fullnameMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    fullnameMod.mod_type = const_cast<char *>("AstVoicemailFullname");
+    fullnameMod.mod_vals.modv_strvals = new char *[2];
+    fullnameMod.mod_vals.modv_strvals[0] = const_cast<char *>(fullname->c_str());
+    fullnameMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(fullnameMod);
+  }
+  if (email.has_value()) {
+    LDAPMod emailMod;
+    emailMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    emailMod.mod_type = const_cast<char *>("AstVoicemailEmail");
+    emailMod.mod_vals.modv_strvals = new char *[2];
+    emailMod.mod_vals.modv_strvals[0] = const_cast<char *>(email->c_str());
+    emailMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(emailMod);
+  }
+
+  if (mods.empty()) {
+    console::e("No attributes to update.");
+    return false;
+  }
+
+  // Convert mods to LDAPMod**
+  std::vector<LDAPMod *> modPtrs;
+  for (auto &mod : mods) {
+    modPtrs.push_back(&mod);
+  }
+  modPtrs.push_back(nullptr);
+
+  if (!m_connection.modifyEntry(mailboxDN, modPtrs.data())) {
+    console::e("Error: {}", m_connection.getError());
+    return false;
+  }
+
+  console::e("Voicemail box updated successfully!");
   return true;
 }
 

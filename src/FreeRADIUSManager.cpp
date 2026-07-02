@@ -10,10 +10,11 @@ FreeRADIUSManager::FreeRADIUSManager(LDAPConnection &connection)
 void FreeRADIUSManager::printUsage() const {
   console::e("FreeRADIUS Commands:");
   console::e("  create-client <client> [base-dn]");
-  console::e("  delete-client <client> [base-dn]");
   console::e("  update-client <client> [base-dn]");
+  console::e("  delete-client <client> [base-dn]");
   console::e("  list-clients [base-dn]");
   console::e("  create-user <username> [base-dn]");
+  console::e("  update-user <username> [base-dn]");
   console::e("  delete-user <username> [base-dn]");
   console::e("  list-users [base-dn]");
 }
@@ -71,7 +72,8 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
 
     clientName = argv[optind];
 
-    return createClient(clientName, baseDN, secret, shortname, type);
+    return createClient(clientName, baseDN, secret, shortname, std::nullopt,
+                        type, std::nullopt, std::nullopt);
   } else if (command == "delete-client") {
     if (optind >= argc) {
       console::e("Usage: ldapcli delete-client <client-name>");
@@ -82,14 +84,66 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
 
     return deleteClient(clientName, baseDN);
   } else if (command == "update-client") {
+    static struct option long_options[] = {
+        {"secret", required_argument, 0, 's'},
+        {"shortname", required_argument, 0, 'n'},
+        {"virtual-server", required_argument, 0, 'v'},
+        {"type", required_argument, 0, 't'},
+        {"require-ma", required_argument, 0, 'm'},
+        {"comment", required_argument, 0, 'c'},
+        {0, 0, 0, 0}};
+
+    std::string clientName;
+    std::optional<std::string> secret;
+    std::optional<std::string> shortname;
+    std::optional<std::string> virtualServer;
+    std::optional<std::string> type;
+    std::optional<bool> requireMa;
+    std::optional<std::string> comment;
+
+    int opt;
+    int option_index = 0;
+
+    while ((opt = getopt_long(argc, argv, "s:n:v:t:m:c:", long_options,
+                              &option_index)) != -1) {
+      switch (opt) {
+      case 's':
+        secret = optarg;
+        break;
+      case 'n':
+        shortname = optarg;
+        break;
+      case 'v':
+        virtualServer = optarg;
+        break;
+      case 't':
+        type = optarg;
+        break;
+      case 'm':
+        requireMa = (strcmp(optarg, "true") == 0);
+        break;
+      case 'c':
+        comment = optarg;
+        break;
+      default:
+        console::e("Usage: ldapcli update-client <client-name> [-s secret] "
+                   "[-n shortname] [-v virtual-server] [-t type] [-m require-ma] "
+                   "[-c comment]");
+        return false;
+      }
+    }
+
     if (optind >= argc) {
-      console::e("Usage: ldapcli update-client <client-name>");
+      console::e("Usage: ldapcli update-client <client-name> [-s secret] [-n "
+                 "shortname] [-v virtual-server] [-t type] [-m require-ma] [-c "
+                 "comment]");
       return false;
     }
 
-    std::string clientName = argv[optind];
+    clientName = argv[optind];
 
-    return updateClient(clientName, baseDN);
+    return updateClient(clientName, baseDN, secret, shortname, virtualServer,
+                        type, requireMa, comment);
   } else if (command == "list-clients") {
     return listClients(baseDN);
   } else if (command == "create-user") {
@@ -100,9 +154,9 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
         {0, 0, 0, 0}};
 
     std::string username;
-    std::string password;
-    std::string serviceType = "Framed-User";
-    std::string framedProtocol = "PPP";
+    std::optional<std::string> password;
+    std::optional<std::string> serviceType = "Framed-User";
+    std::optional<std::string> framedProtocol = "PPP";
 
     int opt;
     int option_index = 0;
@@ -135,6 +189,49 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
     username = argv[optind];
 
     return createUser(username, baseDN, password, serviceType, framedProtocol);
+  } else if (command == "update-user") {
+    static struct option long_options[] = {
+        {"password", required_argument, 0, 'p'},
+        {"service-type", required_argument, 0, 's'},
+        {"framed-protocol", required_argument, 0, 'f'},
+        {0, 0, 0, 0}};
+
+    std::string username;
+    std::optional<std::string> password;
+    std::optional<std::string> serviceType;
+    std::optional<std::string> framedProtocol;
+
+    int opt;
+    int option_index = 0;
+
+    while ((opt = getopt_long(argc, argv, "s:f:p:", long_options,
+                              &option_index)) != -1) {
+      switch (opt) {
+      case 'p':
+        password = optarg;
+        break;
+      case 's':
+        serviceType = optarg;
+        break;
+      case 'f':
+        framedProtocol = optarg;
+        break;
+      default:
+        console::e("Usage: ldapcli update-user <username> [-p password] [-s "
+                   "service-type] [-f framed-protocol]");
+        return false;
+      }
+    }
+
+    if (optind >= argc) {
+      console::e("Usage: ldapcli update-user <username> [-p password] [-s "
+                 "service-type] [-f framed-protocol]");
+      return false;
+    }
+
+    username = argv[optind];
+
+    return updateUser(username, baseDN, password, serviceType, framedProtocol);
   } else if (command == "delete-user") {
     if (optind >= argc) {
       console::e("Usage: ldapcli delete-user <username>");
@@ -154,75 +251,92 @@ bool FreeRADIUSManager::execute(int argc, char *argv[]) {
 
 bool FreeRADIUSManager::createClient(const std::string &clientName,
                                      const std::string &baseDN,
-                                     const std::string &secret,
-                                     const std::string &shortname,
-                                     const std::string &type) {
+                                     const std::optional<std::string> &secret,
+                                     const std::optional<std::string> &shortname,
+                                     const std::optional<std::string> &virtualServer,
+                                     const std::optional<std::string> &type,
+                                     const std::optional<bool> &requireMa,
+                                     const std::optional<std::string> &comment) {
   std::string clientDN = getClientDN(clientName, baseDN);
 
   console::e("Creating FreeRADIUS client:");
   console::e("  Client Name: {}", clientName);
   console::e("  Client DN: {}", clientDN);
 
-  // Create LDAP mods for FreeRADIUSClient object class
+  // Create LDAP mods for radiusClient object class
   std::vector<LDAPMod> mods;
 
   // Required attributes
-  LDAPMod cnMod;
-  cnMod.mod_op = LDAP_MOD_ADD;
-  cnMod.mod_type = const_cast<char *>("cn");
-  cnMod.mod_vals.modv_bvals = new struct berval *[2];
-  cnMod.mod_vals.modv_bvals[0] = new struct berval;
-  cnMod.mod_vals.modv_bvals[0]->bv_len = clientName.length();
-  cnMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>(clientName.c_str());
-  cnMod.mod_vals.modv_bvals[1] = nullptr;
-  mods.push_back(cnMod);
+  LDAPMod identifierMod;
+  identifierMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  identifierMod.mod_type = const_cast<char *>("radiusClientIdentifier");
+  identifierMod.mod_vals.modv_strvals = new char *[2];
+  identifierMod.mod_vals.modv_strvals[0] = const_cast<char *>(clientName.c_str());
+  identifierMod.mod_vals.modv_strvals[1] = nullptr;
+  mods.push_back(identifierMod);
+
+  LDAPMod secretMod;
+  secretMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  secretMod.mod_type = const_cast<char *>("radiusClientSecret");
+  secretMod.mod_vals.modv_strvals = new char *[2];
+  secretMod.mod_vals.modv_strvals[0] = const_cast<char *>("default");
+  secretMod.mod_vals.modv_strvals[1] = nullptr;
+  mods.push_back(secretMod);
 
   LDAPMod objectClassMod;
-  objectClassMod.mod_op = LDAP_MOD_ADD;
+  objectClassMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
-  objectClassMod.mod_vals.modv_bvals = new struct berval *[2];
-  objectClassMod.mod_vals.modv_bvals[0] = new struct berval;
-  objectClassMod.mod_vals.modv_bvals[0]->bv_len = 18;
-  objectClassMod.mod_vals.modv_bvals[0]->bv_val =
-      const_cast<char *>("FreeRADIUSClient");
-  objectClassMod.mod_vals.modv_bvals[1] = nullptr;
+  objectClassMod.mod_vals.modv_strvals = new char *[2];
+  objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("radiusClient");
+  objectClassMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(objectClassMod);
 
   // Optional attributes
-  if (!secret.empty()) {
-    LDAPMod secretMod;
-    secretMod.mod_op = LDAP_MOD_ADD;
-    secretMod.mod_type = const_cast<char *>("radiusClientSecret");
-    secretMod.mod_vals.modv_bvals = new struct berval *[2];
-    secretMod.mod_vals.modv_bvals[0] = new struct berval;
-    secretMod.mod_vals.modv_bvals[0]->bv_len = secret.length();
-    secretMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(secret.c_str());
-    secretMod.mod_vals.modv_bvals[1] = nullptr;
-    mods.push_back(secretMod);
-  }
-  if (!shortname.empty()) {
+  if (shortname.has_value()) {
     LDAPMod shortnameMod;
-    shortnameMod.mod_op = LDAP_MOD_ADD;
+    shortnameMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     shortnameMod.mod_type = const_cast<char *>("radiusClientShortname");
-    shortnameMod.mod_vals.modv_bvals = new struct berval *[2];
-    shortnameMod.mod_vals.modv_bvals[0] = new struct berval;
-    shortnameMod.mod_vals.modv_bvals[0]->bv_len = shortname.length();
-    shortnameMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(shortname.c_str());
-    shortnameMod.mod_vals.modv_bvals[1] = nullptr;
+    shortnameMod.mod_vals.modv_strvals = new char *[2];
+    shortnameMod.mod_vals.modv_strvals[0] = const_cast<char *>(shortname->c_str());
+    shortnameMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(shortnameMod);
   }
-  if (!type.empty()) {
+  if (virtualServer.has_value()) {
+    LDAPMod virtualServerMod;
+    virtualServerMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    virtualServerMod.mod_type = const_cast<char *>("radiusClientVirtualServer");
+    virtualServerMod.mod_vals.modv_strvals = new char *[2];
+    virtualServerMod.mod_vals.modv_strvals[0] = const_cast<char *>(virtualServer->c_str());
+    virtualServerMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(virtualServerMod);
+  }
+  if (type.has_value()) {
     LDAPMod typeMod;
-    typeMod.mod_op = LDAP_MOD_ADD;
+    typeMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     typeMod.mod_type = const_cast<char *>("radiusClientType");
-    typeMod.mod_vals.modv_bvals = new struct berval *[2];
-    typeMod.mod_vals.modv_bvals[0] = new struct berval;
-    typeMod.mod_vals.modv_bvals[0]->bv_len = type.length();
-    typeMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>(type.c_str());
-    typeMod.mod_vals.modv_bvals[1] = nullptr;
+    typeMod.mod_vals.modv_strvals = new char *[2];
+    typeMod.mod_vals.modv_strvals[0] = const_cast<char *>(type->c_str());
+    typeMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(typeMod);
+  }
+  if (requireMa.has_value()) {
+    LDAPMod requireMaMod;
+    requireMaMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    requireMaMod.mod_type = const_cast<char *>("radiusClientRequireMa");
+    requireMaMod.mod_vals.modv_strvals = new char *[2];
+    requireMaMod.mod_vals.modv_strvals[0] = const_cast<char *>(
+        requireMa.value() ? "TRUE" : "FALSE");
+    requireMaMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(requireMaMod);
+  }
+  if (comment.has_value()) {
+    LDAPMod commentMod;
+    commentMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    commentMod.mod_type = const_cast<char *>("radiusClientComment");
+    commentMod.mod_vals.modv_strvals = new char *[2];
+    commentMod.mod_vals.modv_strvals[0] = const_cast<char *>(comment->c_str());
+    commentMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(commentMod);
   }
 
   // Convert mods to LDAPMod**
@@ -242,16 +356,98 @@ bool FreeRADIUSManager::createClient(const std::string &clientName,
 }
 
 bool FreeRADIUSManager::updateClient(const std::string &clientName,
-                                     const std::string &baseDN) {
+                                     const std::string &baseDN,
+                                     const std::optional<std::string> &secret,
+                                     const std::optional<std::string> &shortname,
+                                     const std::optional<std::string> &virtualServer,
+                                     const std::optional<std::string> &type,
+                                     const std::optional<bool> &requireMa,
+                                     const std::optional<std::string> &comment) {
   std::string clientDN = getClientDN(clientName, baseDN);
 
   console::e("Updating FreeRADIUS client:");
   console::e("  Client Name: {}", clientName);
   console::e("  Client DN: {}", clientDN);
 
-  // TODO: Implement update logic
-  console::e("Update functionality not yet implemented");
-  return false;
+  // Create LDAP mods for radiusClient object class
+  std::vector<LDAPMod> mods;
+
+  // Optional attributes
+  if (secret.has_value()) {
+    LDAPMod secretMod;
+    secretMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    secretMod.mod_type = const_cast<char *>("radiusClientSecret");
+    secretMod.mod_vals.modv_strvals = new char *[2];
+    secretMod.mod_vals.modv_strvals[0] = const_cast<char *>(secret->c_str());
+    secretMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(secretMod);
+  }
+  if (shortname.has_value()) {
+    LDAPMod shortnameMod;
+    shortnameMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    shortnameMod.mod_type = const_cast<char *>("radiusClientShortname");
+    shortnameMod.mod_vals.modv_strvals = new char *[2];
+    shortnameMod.mod_vals.modv_strvals[0] = const_cast<char *>(shortname->c_str());
+    shortnameMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(shortnameMod);
+  }
+  if (virtualServer.has_value()) {
+    LDAPMod virtualServerMod;
+    virtualServerMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    virtualServerMod.mod_type = const_cast<char *>("radiusClientVirtualServer");
+    virtualServerMod.mod_vals.modv_strvals = new char *[2];
+    virtualServerMod.mod_vals.modv_strvals[0] = const_cast<char *>(virtualServer->c_str());
+    virtualServerMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(virtualServerMod);
+  }
+  if (type.has_value()) {
+    LDAPMod typeMod;
+    typeMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    typeMod.mod_type = const_cast<char *>("radiusClientType");
+    typeMod.mod_vals.modv_strvals = new char *[2];
+    typeMod.mod_vals.modv_strvals[0] = const_cast<char *>(type->c_str());
+    typeMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(typeMod);
+  }
+  if (requireMa.has_value()) {
+    LDAPMod requireMaMod;
+    requireMaMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    requireMaMod.mod_type = const_cast<char *>("radiusClientRequireMa");
+    requireMaMod.mod_vals.modv_strvals = new char *[2];
+    requireMaMod.mod_vals.modv_strvals[0] = const_cast<char *>(
+        requireMa.value() ? "TRUE" : "FALSE");
+    requireMaMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(requireMaMod);
+  }
+  if (comment.has_value()) {
+    LDAPMod commentMod;
+    commentMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    commentMod.mod_type = const_cast<char *>("radiusClientComment");
+    commentMod.mod_vals.modv_strvals = new char *[2];
+    commentMod.mod_vals.modv_strvals[0] = const_cast<char *>(comment->c_str());
+    commentMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(commentMod);
+  }
+
+  if (mods.empty()) {
+    console::e("No attributes to update.");
+    return false;
+  }
+
+  // Convert mods to LDAPMod**
+  std::vector<LDAPMod *> modPtrs;
+  for (auto &mod : mods) {
+    modPtrs.push_back(&mod);
+  }
+  modPtrs.push_back(nullptr);
+
+  if (!m_connection.modifyEntry(clientDN, modPtrs.data())) {
+    console::e("Error: {}", m_connection.getError());
+    return false;
+  }
+
+  console::e("Client updated successfully!");
+  return true;
 }
 
 bool FreeRADIUSManager::deleteClient(const std::string &clientName,
@@ -307,75 +503,69 @@ bool FreeRADIUSManager::listClients(const std::string &baseDN) {
 
 bool FreeRADIUSManager::createUser(const std::string &username,
                                    const std::string &baseDN,
-                                   const std::string &password,
-                                   const std::string &serviceType,
-                                   const std::string &framedProtocol) {
+                                   const std::optional<std::string> &password,
+                                   const std::optional<std::string> &serviceType,
+                                   const std::optional<std::string> &framedProtocol) {
   std::string userDN = getUserDN(username, baseDN);
 
   console::e("Creating FreeRADIUS user:");
   console::e("  Username: {}", username);
   console::e("  User DN: {}", userDN);
 
-  // Create LDAP mods for FreeRADIUSUser object class
+  // Create LDAP mods for radiusObjectProfile and radiusprofile object classes
   std::vector<LDAPMod> mods;
 
   // Required attributes
   LDAPMod cnMod;
-  cnMod.mod_op = LDAP_MOD_ADD;
+  cnMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   cnMod.mod_type = const_cast<char *>("cn");
-  cnMod.mod_vals.modv_bvals = new struct berval *[2];
-  cnMod.mod_vals.modv_bvals[0] = new struct berval;
-  cnMod.mod_vals.modv_bvals[0]->bv_len = username.length();
-  cnMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>(username.c_str());
-  cnMod.mod_vals.modv_bvals[1] = nullptr;
+  cnMod.mod_vals.modv_strvals = new char *[2];
+  cnMod.mod_vals.modv_strvals[0] = const_cast<char *>(username.c_str());
+  cnMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(cnMod);
 
   LDAPMod objectClassMod;
-  objectClassMod.mod_op = LDAP_MOD_ADD;
+  objectClassMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
-  objectClassMod.mod_vals.modv_bvals = new struct berval *[2];
-  objectClassMod.mod_vals.modv_bvals[0] = new struct berval;
-  objectClassMod.mod_vals.modv_bvals[0]->bv_len = 15;
-  objectClassMod.mod_vals.modv_bvals[0]->bv_val =
-      const_cast<char *>("FreeRADIUSUser");
-  objectClassMod.mod_vals.modv_bvals[1] = nullptr;
+  objectClassMod.mod_vals.modv_strvals = new char *[2];
+  objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("radiusObjectProfile");
+  objectClassMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(objectClassMod);
 
+  LDAPMod profileMod;
+  profileMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  profileMod.mod_type = const_cast<char *>("objectClass");
+  profileMod.mod_vals.modv_strvals = new char *[2];
+  profileMod.mod_vals.modv_strvals[0] = const_cast<char *>("radiusprofile");
+  profileMod.mod_vals.modv_strvals[1] = nullptr;
+  mods.push_back(profileMod);
+
   // Optional attributes
-  if (!password.empty()) {
+  if (password.has_value()) {
     LDAPMod passwordMod;
-    passwordMod.mod_op = LDAP_MOD_ADD;
-    passwordMod.mod_type = const_cast<char *>("radiusUserPassword");
-    passwordMod.mod_vals.modv_bvals = new struct berval *[2];
-    passwordMod.mod_vals.modv_bvals[0] = new struct berval;
-    passwordMod.mod_vals.modv_bvals[0]->bv_len = password.length();
-    passwordMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(password.c_str());
-    passwordMod.mod_vals.modv_bvals[1] = nullptr;
+    passwordMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    passwordMod.mod_type = const_cast<char *>("userPassword");
+    passwordMod.mod_vals.modv_strvals = new char *[2];
+    passwordMod.mod_vals.modv_strvals[0] = const_cast<char *>(password->c_str());
+    passwordMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(passwordMod);
   }
-  if (!serviceType.empty()) {
+  if (serviceType.has_value()) {
     LDAPMod serviceTypeMod;
-    serviceTypeMod.mod_op = LDAP_MOD_ADD;
+    serviceTypeMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     serviceTypeMod.mod_type = const_cast<char *>("radiusServiceType");
-    serviceTypeMod.mod_vals.modv_bvals = new struct berval *[2];
-    serviceTypeMod.mod_vals.modv_bvals[0] = new struct berval;
-    serviceTypeMod.mod_vals.modv_bvals[0]->bv_len = serviceType.length();
-    serviceTypeMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(serviceType.c_str());
-    serviceTypeMod.mod_vals.modv_bvals[1] = nullptr;
+    serviceTypeMod.mod_vals.modv_strvals = new char *[2];
+    serviceTypeMod.mod_vals.modv_strvals[0] = const_cast<char *>(serviceType->c_str());
+    serviceTypeMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(serviceTypeMod);
   }
-  if (!framedProtocol.empty()) {
+  if (framedProtocol.has_value()) {
     LDAPMod framedProtocolMod;
-    framedProtocolMod.mod_op = LDAP_MOD_ADD;
+    framedProtocolMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     framedProtocolMod.mod_type = const_cast<char *>("radiusFramedProtocol");
-    framedProtocolMod.mod_vals.modv_bvals = new struct berval *[2];
-    framedProtocolMod.mod_vals.modv_bvals[0] = new struct berval;
-    framedProtocolMod.mod_vals.modv_bvals[0]->bv_len = framedProtocol.length();
-    framedProtocolMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(framedProtocol.c_str());
-    framedProtocolMod.mod_vals.modv_bvals[1] = nullptr;
+    framedProtocolMod.mod_vals.modv_strvals = new char *[2];
+    framedProtocolMod.mod_vals.modv_strvals[0] = const_cast<char *>(framedProtocol->c_str());
+    framedProtocolMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(framedProtocolMod);
   }
 
@@ -417,7 +607,7 @@ bool FreeRADIUSManager::listUsers(const std::string &baseDN) {
   console::e("Base DN: {}", baseDN);
 
   std::vector<std::vector<std::pair<std::string, std::string>>> results;
-  std::string filter = "(objectClass=FreeRADIUSUser)";
+  std::string filter = "(objectClass=radiusObjectProfile)";
 
   if (!m_connection.search(baseDN, LDAP_SCOPE_SUBTREE, filter, results)) {
     console::e("Error: {}", m_connection.getError());

@@ -280,15 +280,23 @@ bool KerberosManager::execute(int argc, char *argv[]) {
 
 bool KerberosManager::createPrincipal(
     const std::string &principal, const std::string &baseDN,
-    const std::string &password, const std::string &fullname,
-    const std::string &email, const std::string &canonicalName,
-    const std::string &principalType, const std::string &principalExpiration,
-    const std::string &passwordExpiration, const std::string &ticketFlags,
-    const std::string &maxTicketLife, const std::string &maxRenewableAge,
-    const std::string &lastPwdChange, const std::string &lastSuccessfulAuth,
-    const std::string &lastFailedAuth, const std::string &loginFailedCount,
-    const std::string &principalAliases, const std::string &allowedToDelegateTo,
-    const std::string &principalAuthInd) {
+    const std::optional<std::string> &password,
+    const std::optional<std::string> &fullname,
+    const std::optional<std::string> &email,
+    const std::optional<std::string> &canonicalName,
+    const std::optional<std::string> &principalType,
+    const std::optional<std::string> &principalExpiration,
+    const std::optional<std::string> &passwordExpiration,
+    const std::optional<std::string> &ticketFlags,
+    const std::optional<std::string> &maxTicketLife,
+    const std::optional<std::string> &maxRenewableAge,
+    const std::optional<std::string> &lastPwdChange,
+    const std::optional<std::string> &lastSuccessfulAuth,
+    const std::optional<std::string> &lastFailedAuth,
+    const std::optional<std::string> &loginFailedCount,
+    const std::optional<std::string> &principalAliases,
+    const std::optional<std::string> &allowedToDelegateTo,
+    const std::optional<std::string> &principalAuthInd) {
   std::string principalDN = getPrincipalDN(principal, baseDN);
 
   console::e("Creating Kerberos principal:");
@@ -300,54 +308,38 @@ bool KerberosManager::createPrincipal(
 
   // Required attributes
   LDAPMod cnMod;
-  cnMod.mod_op = LDAP_MOD_ADD;
+  cnMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   cnMod.mod_type = const_cast<char *>("cn");
-  cnMod.mod_vals.modv_bvals = new struct berval *[2];
-  cnMod.mod_vals.modv_bvals[0] = new struct berval;
-  cnMod.mod_vals.modv_bvals[0]->bv_len = principal.length();
-  cnMod.mod_vals.modv_bvals[0]->bv_val = const_cast<char *>(principal.c_str());
-  cnMod.mod_vals.modv_bvals[1] = nullptr;
+  cnMod.mod_vals.modv_strvals = new char *[2];
+  cnMod.mod_vals.modv_strvals[0] = const_cast<char *>(principal.c_str());
+  cnMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(cnMod);
 
   LDAPMod objectClassMod;
-  objectClassMod.mod_op = LDAP_MOD_ADD;
+  objectClassMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
-  objectClassMod.mod_vals.modv_bvals = new struct berval *[3];
-  objectClassMod.mod_vals.modv_bvals[0] = new struct berval;
-  objectClassMod.mod_vals.modv_bvals[0]->bv_len = 12;
-  objectClassMod.mod_vals.modv_bvals[0]->bv_val =
-      const_cast<char *>("krb5Principal");
-  objectClassMod.mod_vals.modv_bvals[1] = new struct berval;
-  objectClassMod.mod_vals.modv_bvals[1]->bv_len = 15;
-  objectClassMod.mod_vals.modv_bvals[1]->bv_val =
-      const_cast<char *>("krbPrincipalAux");
-  objectClassMod.mod_vals.modv_bvals[2] = new struct berval;
-  objectClassMod.mod_vals.modv_bvals[2]->bv_len = 11;
-  objectClassMod.mod_vals.modv_bvals[2]->bv_val =
-      const_cast<char *>("krbPrincipal");
-  objectClassMod.mod_vals.modv_bvals[3] = nullptr;
+  objectClassMod.mod_vals.modv_strvals = new char *[3];
+  objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("krbPrincipal");
+  objectClassMod.mod_vals.modv_strvals[1] = const_cast<char *>("krbPrincipalAux");
+  objectClassMod.mod_vals.modv_strvals[2] = nullptr;
   mods.push_back(objectClassMod);
 
   // Optional attributes
-  if (!password.empty()) {
+  if (password.has_value()) {
     LDAPMod passwordMod;
-    passwordMod.mod_op = LDAP_MOD_ADD;
+    passwordMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     passwordMod.mod_type = const_cast<char *>("krbPrincipalKey");
-    passwordMod.mod_vals.modv_bvals = new struct berval *[2];
-    passwordMod.mod_vals.modv_bvals[0] = new struct berval;
-    passwordMod.mod_vals.modv_bvals[0]->bv_len = password.length();
-    passwordMod.mod_vals.modv_bvals[0]->bv_val =
-        const_cast<char *>(password.c_str());
-    passwordMod.mod_vals.modv_bvals[1] = nullptr;
+    passwordMod.mod_vals.modv_strvals = new char *[2];
+    passwordMod.mod_vals.modv_strvals[0] = const_cast<char *>(password->c_str());
+    passwordMod.mod_vals.modv_strvals[1] = nullptr;
     mods.push_back(passwordMod);
   }
-  if (!fullname.empty()) {
+  if (fullname.has_value()) {
     LDAPMod fullnameMod;
-    fullnameMod.mod_op = LDAP_MOD_ADD;
+    fullnameMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
     fullnameMod.mod_type = const_cast<char *>("krbPrincipalName");
-    fullnameMod.mod_vals.modv_bvals = new struct berval *[2];
-    fullnameMod.mod_vals.modv_bvals[0] = new struct berval;
-    fullnameMod.mod_vals.modv_bvals[0]->bv_len = fullname.length();
+    fullnameMod.mod_vals.modv_strvals = new char *[2];
+    fullnameMod.mod_vals.modv_strvals[0] = const_cast<char *>(fullname->c_str());
     fullnameMod.mod_vals.modv_bvals[0]->bv_val =
         const_cast<char *>(fullname.c_str());
     fullnameMod.mod_vals.modv_bvals[1] = nullptr;

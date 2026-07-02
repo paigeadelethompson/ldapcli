@@ -4,6 +4,7 @@
 #include "LDAPConnection.hpp"
 #include "LDAPManagerBase.hpp"
 #include <getopt.h>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -13,12 +14,16 @@ public:
 
   bool listZones(const std::string &baseDN);
   bool createZone(const std::string &zoneName, const std::string &baseDN,
-                  const std::string &type = "master");
-  bool updateZone(const std::string &zoneName, const std::string &baseDN);
+                  const std::optional<std::string> &type);
+  bool updateZone(const std::string &zoneName, const std::string &baseDN,
+                  const std::optional<std::string> &notifiedSerial,
+                  const std::optional<std::string> &lastCheck,
+                  const std::optional<std::string> &master);
   bool deleteZone(const std::string &zoneName, const std::string &baseDN);
   bool addRecord(const std::string &zoneName, const std::string &baseDN,
                  const std::string &recordName, const std::string &recordType,
-                 const std::string &recordValue, int ttl = 3600);
+                 const std::string &recordValue,
+                 const std::optional<int> &ttl);
   bool deleteRecord(const std::string &zoneName, const std::string &baseDN,
                     const std::string &recordName,
                     const std::string &recordType);
