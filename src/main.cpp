@@ -1,5 +1,6 @@
 #include "AsteriskManager.hpp"
 #include "Config.hpp"
+#include "Console.hpp"
 #include "FreeRADIUSManager.hpp"
 #include "KerberosManager.hpp"
 #include "LDAPConnection.hpp"
@@ -7,24 +8,32 @@
 #include "OpenLDAPManager.hpp"
 #include "PowerDNSManager.hpp"
 #include "SendmailManager.hpp"
-#include <iostream>
 #include <memory>
 #include <stdexcept>
 
 void printUsage(const char *programName) {
-  std::cout << "LDAP CLI - LDAP Service Management Tool" << std::endl;
-  std::cout << "========================================" << std::endl;
-  std::cout << "Usage: " << programName << " <service> [command] [arguments...]"
-            << std::endl;
-  std::cout << std::endl;
-  std::cout << "Services:" << std::endl;
-  std::cout << "  dns          - PowerDNS management" << std::endl;
-  std::cout << "  asterisk     - Asterisk management" << std::endl;
-  std::cout << "  freeradius   - FreeRADIUS management" << std::endl;
-  std::cout << "  kerberos     - Kerberos management" << std::endl;
-  std::cout << "  opendkim     - OpenDKIM management" << std::endl;
-  std::cout << "  sendmail     - Sendmail management" << std::endl;
-  std::cout << "  openldap     - OpenLDAP management" << std::endl;
+  console::e("{}{}{} - LDAP Service Management Tool{}", console::colors::BOLD,
+             console::colors::CYAN, "LDAP CLI", console::colors::RESET);
+  console::e("Usage: {} <{}service{}> [{}command{}] [{}arguments...{}]",
+             programName, console::colors::ITALIC, console::colors::RESET,
+             console::colors::ITALIC, console::colors::RESET,
+             console::colors::ITALIC, console::colors::RESET);
+  console::e("");
+  console::e("{}Services:{}", console::colors::BOLD, console::colors::RESET);
+  console::e("  {}dns{}          - PowerDNS management", console::colors::GREEN,
+             console::colors::RESET);
+  console::e("  {}asterisk{}     - Asterisk management", console::colors::GREEN,
+             console::colors::RESET);
+  console::e("  {}freeradius{}   - FreeRADIUS management",
+             console::colors::GREEN, console::colors::RESET);
+  console::e("  {}kerberos{}     - Kerberos management", console::colors::GREEN,
+             console::colors::RESET);
+  console::e("  {}opendkim{}     - OpenDKIM management", console::colors::GREEN,
+             console::colors::RESET);
+  console::e("  {}sendmail{}     - Sendmail management", console::colors::GREEN,
+             console::colors::RESET);
+  console::e("  {}openldap{}     - OpenLDAP management", console::colors::GREEN,
+             console::colors::RESET);
 }
 
 int main(int argc, char *argv[]) {
@@ -46,8 +55,8 @@ int main(int argc, char *argv[]) {
     std::string bindPassword = Config::getInstance().getBindPassword();
 
     if (!connection.connect(ldapURI, bindDN, bindPassword)) {
-      std::cerr << "Failed to connect to LDAP: " << connection.getError()
-                << std::endl;
+      console::e("{}Failed to connect to LDAP: {}{}", console::colors::BOLD,
+                 console::colors::RED, connection.getError());
       return 1;
     }
 
@@ -69,7 +78,8 @@ int main(int argc, char *argv[]) {
     } else if (service == "openldap") {
       manager = std::make_unique<OpenLDAPManager>(connection);
     } else {
-      std::cerr << "Unknown service: " << service << std::endl;
+      console::e("{}Unknown service: {}{}", console::colors::BOLD,
+                 console::colors::RED, service);
       printUsage(argv[0]);
       return 1;
     }
@@ -80,12 +90,14 @@ int main(int argc, char *argv[]) {
         return 1;
       }
     } catch (const std::exception &e) {
-      std::cerr << "Error: " << e.what() << std::endl;
+      console::e("{}Error: {}{}", console::colors::BOLD, console::colors::RED,
+                 e.what());
       return 1;
     }
 
   } catch (const std::exception &e) {
-    std::cerr << "Error: " << e.what() << std::endl;
+    console::e("{}Error: {}{}", console::colors::BOLD, console::colors::RED,
+               e.what());
     return 1;
   }
 
