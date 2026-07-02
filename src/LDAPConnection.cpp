@@ -1,7 +1,9 @@
 #include "LDAPConnection.hpp"
-#include "ca.h"
 #include <cstring>
+#include <fstream>
 #include <stdexcept>
+#include <string>
+#include <sys/stat.h>
 
 std::string ModsToString(const std::string &dn, LDAPMod **mods,
                          const std::string &changeType) {
@@ -180,18 +182,31 @@ bool LDAPConnection::connect(const std::string &uri, const std::string &bindDN,
     return false;
   }
 
-  rc = ldap_set_option(m_ldap, LDAP_OPT_X_TLS_CACERTFILE, netcrave_cert);
-  /*
-   * Embed CA certificate as byte array for TLS verification
-   * Certificate is from Easy-RSA with 2048-bit RSA key
-   * Used for LDAPS connections with self-signed certificates
-   */
+  // Try to find CA certificate directory in common locations
+  const char *ca_cert_dirs[] = {"/etc/ssl", "/usr/local/etc/ssl", nullptr};
 
-  if (rc != LDAP_SUCCESS) {
-    m_error = "Failed to set TLS CA cert: " + std::string(ldap_err2string(rc));
-    ldap_unbind_ext_s(m_ldap, nullptr, nullptr);
-    m_ldap = nullptr;
-    return false;
+  const char *ca_cert_dir = nullptr;
+  for (int i = 0; ca_cert_dirs[i] != nullptr; i++) {
+    struct stat st;
+    if (stat(ca_cert_dirs[i], &st) == 0 && S_ISDIR(st.st_mode)) {
+      ca_cert_dir = ca_cert_dirs[i];
+      break;
+    }
+  }
+
+  if (ca_cert_dir) {
+    rc = ldap_set_option(m_ldap, LDAP_OPT_X_TLS_CACERTDIR, ca_cert_dir);
+    if (rc != LDAP_SUCCESS) {
+      m_error =
+          "Failed to set TLS CA cert dir: " + std::string(ldap_err2string(rc));
+      ldap_unbind_ext_s(m_ldap, nullptr, nullptr);
+      m_ldap = nullptr;
+      return false;
+    }
+  } else {
+    // No CA certificate directory found, continue without it
+    // This may cause issues with self-signed certificates
+    rc = LDAP_SUCCESS;
   }
 
   if (!bindDN.empty() && !password.empty()) {
