@@ -40,6 +40,5 @@ add_executable(ldapcli ${SOURCES})
 # Link libraries
 target_link_libraries(ldapcli PkgConfig::LDAP)
 
-
 # Install rules
 install(FILES ${CMAKE_SOURCE_DIR}/config/ldapcli.conf DESTINATION /etc/ldapcli)
