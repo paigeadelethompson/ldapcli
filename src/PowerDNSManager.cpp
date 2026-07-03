@@ -34,7 +34,7 @@ void PowerDNSManager::printRecordTypeOptions() const {
   console::e("Record type long options (each sets type and value):");
 #define POWERDNS_RECORD_OPTION(name, type)                                     \
   console::e("  --{} <value>  ({} record)", name, type);
-#include "PowerDNSRecordOptions.inc"
+#include "PowerDNSRecordOptions.hpp"
 }
 
 std::string PowerDNSManager::getServiceName() const { return "dns"; }
@@ -80,7 +80,7 @@ namespace {
 const std::unordered_map<std::string, std::string> &recordTypeLongOptions() {
   static const std::unordered_map<std::string, std::string> opts = {
 #define POWERDNS_RECORD_OPTION(name, type) {name, type},
-#include "PowerDNSRecordOptions.inc"
+#include "PowerDNSRecordOptions.hpp"
 #undef POWERDNS_RECORD_OPTION
   };
   return opts;
@@ -93,7 +93,7 @@ struct option *recordLongOptions() {
                                     {"value", required_argument, 0, 'v'},
                                     {"type", required_argument, 0, 'y'},
 #define POWERDNS_RECORD_OPTION(name, type) {name, required_argument, 0, 0},
-#include "PowerDNSRecordOptions.inc"
+#include "PowerDNSRecordOptions.hpp"
 #undef POWERDNS_RECORD_OPTION
                                     {nullptr, 0, 0, 0}};
   return options;
