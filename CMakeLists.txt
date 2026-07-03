@@ -22,7 +22,7 @@ include_directories(
 
 # Source files
 set(SOURCES
-    src/main.cpp
+    src/Main.cpp
     src/Config.cpp
     src/LDAPConnection.cpp
     src/PowerDNSManager.cpp
