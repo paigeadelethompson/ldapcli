@@ -511,8 +511,7 @@ bool PowerDNSManager::createZone(const std::string &zoneName,
   objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("top");
   objectClassMod.mod_vals.modv_strvals[1] =
       const_cast<char *>("domainRelatedObject");
-  objectClassMod.mod_vals.modv_strvals[2] =
-      const_cast<char *>("dNSDomain2");
+  objectClassMod.mod_vals.modv_strvals[2] = const_cast<char *>("dNSDomain2");
   objectClassMod.mod_vals.modv_strvals[3] = const_cast<char *>("PdnsDomain");
   objectClassMod.mod_vals.modv_strvals[4] = nullptr;
   mods.push_back(objectClassMod);
@@ -706,8 +705,7 @@ bool PowerDNSManager::addRecord(const std::string &zoneName,
   objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("top");
   objectClassMod.mod_vals.modv_strvals[1] =
       const_cast<char *>("domainRelatedObject");
-  objectClassMod.mod_vals.modv_strvals[2] =
-      const_cast<char *>("dNSDomain2");
+  objectClassMod.mod_vals.modv_strvals[2] = const_cast<char *>("dNSDomain2");
   objectClassMod.mod_vals.modv_strvals[3] = nullptr;
   mods.push_back(objectClassMod);
 
