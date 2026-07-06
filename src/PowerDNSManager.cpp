@@ -637,6 +637,46 @@ bool PowerDNSManager::addRecord(const std::string &zoneName,
     console::e("  TTL: {}", ttl.value());
   }
 
+  // For zone-level records (like SOA, NS at @), add to zone entry
+  if (recordName == "@") {
+    std::vector<LDAPMod> mods;
+
+    LDAPMod recordValueMod;
+    recordValueMod.mod_op = LDAP_MOD_ADD;
+    recordValueMod.mod_type = const_cast<char *>(recordAttr.c_str());
+    recordValueMod.mod_vals.modv_strvals = new char *[2];
+    recordValueMod.mod_vals.modv_strvals[0] =
+        const_cast<char *>(recordValue.c_str());
+    recordValueMod.mod_vals.modv_strvals[1] = nullptr;
+    mods.push_back(recordValueMod);
+
+    if (ttl.has_value() && ttl.value() > 0) {
+      std::string ttlStr = std::to_string(ttl.value());
+      LDAPMod ttlMod;
+      ttlMod.mod_op = LDAP_MOD_ADD;
+      ttlMod.mod_type = const_cast<char *>("dNSTTL");
+      ttlMod.mod_vals.modv_strvals = new char *[2];
+      ttlMod.mod_vals.modv_strvals[0] = const_cast<char *>(ttlStr.c_str());
+      ttlMod.mod_vals.modv_strvals[1] = nullptr;
+      mods.push_back(ttlMod);
+    }
+
+    std::vector<LDAPMod *> modPtrs;
+    for (auto &mod : mods) {
+      modPtrs.push_back(&mod);
+    }
+    modPtrs.push_back(nullptr);
+
+    if (!m_connection.modifyEntry(zoneDN, modPtrs.data())) {
+      console::e("Error: {}", m_connection.getError());
+      return false;
+    }
+
+    console::e("Zone record added successfully!");
+    return true;
+  }
+
+  // For subdomain records, create separate entry
   std::string recordDN = "dc=" + recordName + "," + zoneDN;
 
   std::vector<LDAPMod> mods;
@@ -652,20 +692,23 @@ bool PowerDNSManager::addRecord(const std::string &zoneName,
   LDAPMod associatedDomainMod;
   associatedDomainMod.mod_op = LDAP_MOD_ADD;
   associatedDomainMod.mod_type = const_cast<char *>("associatedDomain");
+  std::string fullRecordName = recordName + "." + zoneName;
   associatedDomainMod.mod_vals.modv_strvals = new char *[2];
   associatedDomainMod.mod_vals.modv_strvals[0] =
-      const_cast<char *>(recordName.c_str());
+      const_cast<char *>(fullRecordName.c_str());
   associatedDomainMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(associatedDomainMod);
 
   LDAPMod objectClassMod;
   objectClassMod.mod_op = LDAP_MOD_ADD;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
-  objectClassMod.mod_vals.modv_strvals = new char *[3];
+  objectClassMod.mod_vals.modv_strvals = new char *[4];
   objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("top");
   objectClassMod.mod_vals.modv_strvals[1] =
+      const_cast<char *>("domainRelatedObject");
+  objectClassMod.mod_vals.modv_strvals[2] =
       const_cast<char *>("dNSDomain2");
-  objectClassMod.mod_vals.modv_strvals[2] = nullptr;
+  objectClassMod.mod_vals.modv_strvals[3] = nullptr;
   mods.push_back(objectClassMod);
 
   LDAPMod recordValueMod;
