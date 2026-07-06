@@ -845,19 +845,60 @@ bool PowerDNSManager::listRecords(const std::string &zoneName,
     return true;
   }
 
-  std::vector<std::string> flatData;
-  flatData.reserve(results.size() * 2);
-  for (const auto &entry : results) {
-    for (const auto &[attr, value] : entry) {
+  // If only one result, use printLdif
+  if (results.size() == 1) {
+    std::vector<std::string> flatData;
+    flatData.reserve(results[0].size() * 2);
+    for (const auto &[attr, value] : results[0]) {
       flatData.push_back(attr);
       flatData.push_back(value);
     }
+
+    std::mdspan<std::string, std::dextents<size_t, 2>> ldifData(
+        flatData.data(), results.size(), 2);
+
+    console::printLdif(ldifData);
+    return true;
   }
 
-  std::mdspan<std::string, std::dextents<size_t, 2>> ldifData(
-      flatData.data(), results.size(), 2);
+  // Multiple records - build table with header row + data rows
+  std::vector<std::string> flatData;
+  flatData.reserve((results.size() + 1) * 4); // header + each entry has ~4 attrs
 
-  console::printLdif(ldifData);
+  // Header row: Record Name, Type, Value, TTL
+  flatData.push_back("Record");
+  flatData.push_back("Type");
+  flatData.push_back("Value");
+  flatData.push_back("TTL");
+
+  for (const auto &entry : results) {
+    std::string recordName;
+    std::string type;
+    std::string value;
+    std::string ttl;
+
+    // Extract attributes from entry
+    for (const auto &[attr, val] : entry) {
+      if (attr == "dc") {
+        recordName = val;
+      } else if (attr.find("Record") != std::string::npos && attr != "dNSTTL") {
+        type = attr.substr(0, attr.length() - 6); // Remove "Record" suffix
+        value = val;
+      } else if (attr == "dNSTTL") {
+        ttl = val;
+      }
+    }
+
+    flatData.push_back(recordName);
+    flatData.push_back(type);
+    flatData.push_back(value);
+    flatData.push_back(ttl);
+  }
+
+  std::mdspan<std::string, std::dextents<size_t, 2>> tableData(
+      flatData.data(), results.size() + 1, 4);
+
+  console::printTable(tableData);
   return true;
 }
 
