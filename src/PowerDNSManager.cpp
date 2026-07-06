@@ -487,29 +487,41 @@ bool PowerDNSManager::createZone(const std::string &zoneName,
 
   std::vector<LDAPMod> mods;
 
-  LDAPMod cnMod;
-  cnMod.mod_op = LDAP_MOD_ADD;
-  cnMod.mod_type = const_cast<char *>("cn");
-  cnMod.mod_vals.modv_strvals = new char *[2];
-  cnMod.mod_vals.modv_strvals[0] = const_cast<char *>(zoneName.c_str());
-  cnMod.mod_vals.modv_strvals[1] = nullptr;
-  mods.push_back(cnMod);
+  LDAPMod dcMod;
+  dcMod.mod_op = LDAP_MOD_ADD;
+  dcMod.mod_type = const_cast<char *>("dc");
+  dcMod.mod_vals.modv_strvals = new char *[2];
+  dcMod.mod_vals.modv_strvals[0] = const_cast<char *>(zoneName.c_str());
+  dcMod.mod_vals.modv_strvals[1] = nullptr;
+  mods.push_back(dcMod);
+
+  LDAPMod associatedDomainMod;
+  associatedDomainMod.mod_op = LDAP_MOD_ADD;
+  associatedDomainMod.mod_type = const_cast<char *>("associatedDomain");
+  associatedDomainMod.mod_vals.modv_strvals = new char *[2];
+  associatedDomainMod.mod_vals.modv_strvals[0] =
+      const_cast<char *>(zoneName.c_str());
+  associatedDomainMod.mod_vals.modv_strvals[1] = nullptr;
+  mods.push_back(associatedDomainMod);
 
   LDAPMod objectClassMod;
   objectClassMod.mod_op = LDAP_MOD_ADD;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
-  objectClassMod.mod_vals.modv_strvals = new char *[3];
-  objectClassMod.mod_vals.modv_strvals[0] =
-      const_cast<char *>("organizationalRole");
-  objectClassMod.mod_vals.modv_strvals[1] = const_cast<char *>("PdnsDomain");
-  objectClassMod.mod_vals.modv_strvals[2] = nullptr;
+  objectClassMod.mod_vals.modv_strvals = new char *[5];
+  objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("top");
+  objectClassMod.mod_vals.modv_strvals[1] =
+      const_cast<char *>("domainRelatedObject");
+  objectClassMod.mod_vals.modv_strvals[2] =
+      const_cast<char *>("dNSDomain2");
+  objectClassMod.mod_vals.modv_strvals[3] = const_cast<char *>("PdnsDomain");
+  objectClassMod.mod_vals.modv_strvals[4] = nullptr;
   mods.push_back(objectClassMod);
 
   LDAPMod domainIdMod;
   domainIdMod.mod_op = LDAP_MOD_ADD;
   domainIdMod.mod_type = const_cast<char *>("PdnsDomainId");
   domainIdMod.mod_vals.modv_strvals = new char *[2];
-  domainIdMod.mod_vals.modv_strvals[0] = const_cast<char *>("0");
+  domainIdMod.mod_vals.modv_strvals[0] = const_cast<char *>("1");
   domainIdMod.mod_vals.modv_strvals[1] = nullptr;
   mods.push_back(domainIdMod);
 
@@ -625,25 +637,34 @@ bool PowerDNSManager::addRecord(const std::string &zoneName,
     console::e("  TTL: {}", ttl.value());
   }
 
-  std::string recordDN = "cn=" + recordName + "," + zoneDN;
+  std::string recordDN = "dc=" + recordName + "," + zoneDN;
 
   std::vector<LDAPMod> mods;
 
-  LDAPMod cnMod;
-  cnMod.mod_op = LDAP_MOD_ADD;
-  cnMod.mod_type = const_cast<char *>("cn");
-  cnMod.mod_vals.modv_strvals = new char *[2];
-  cnMod.mod_vals.modv_strvals[0] = const_cast<char *>(recordName.c_str());
-  cnMod.mod_vals.modv_strvals[1] = nullptr;
-  mods.push_back(cnMod);
+  LDAPMod dcMod;
+  dcMod.mod_op = LDAP_MOD_ADD;
+  dcMod.mod_type = const_cast<char *>("dc");
+  dcMod.mod_vals.modv_strvals = new char *[2];
+  dcMod.mod_vals.modv_strvals[0] = const_cast<char *>(recordName.c_str());
+  dcMod.mod_vals.modv_strvals[1] = nullptr;
+  mods.push_back(dcMod);
+
+  LDAPMod associatedDomainMod;
+  associatedDomainMod.mod_op = LDAP_MOD_ADD;
+  associatedDomainMod.mod_type = const_cast<char *>("associatedDomain");
+  associatedDomainMod.mod_vals.modv_strvals = new char *[2];
+  associatedDomainMod.mod_vals.modv_strvals[0] =
+      const_cast<char *>(recordName.c_str());
+  associatedDomainMod.mod_vals.modv_strvals[1] = nullptr;
+  mods.push_back(associatedDomainMod);
 
   LDAPMod objectClassMod;
   objectClassMod.mod_op = LDAP_MOD_ADD;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
   objectClassMod.mod_vals.modv_strvals = new char *[3];
-  objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("dNSDomain2");
+  objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("top");
   objectClassMod.mod_vals.modv_strvals[1] =
-      const_cast<char *>("PdnsRecordData");
+      const_cast<char *>("dNSDomain2");
   objectClassMod.mod_vals.modv_strvals[2] = nullptr;
   mods.push_back(objectClassMod);
 
@@ -688,7 +709,7 @@ bool PowerDNSManager::updateRecord(
     const std::optional<std::string> &recordValue,
     const std::optional<int> &ttl) {
   std::string zoneDN = getZoneDN(zoneName, baseDN);
-  std::string recordDN = "cn=" + recordName + "," + zoneDN;
+  std::string recordDN = "dc=" + recordName + "," + zoneDN;
   std::string recordAttr = recordTypeToAttribute(recordType);
 
   console::e("Updating PowerDNS record:");
@@ -752,7 +773,7 @@ bool PowerDNSManager::deleteRecord(const std::string &zoneName,
   console::e("  Record Name: {}", recordName);
   console::e("  Record Type: {}", recordType);
 
-  std::string recordDN = "cn=" + recordName + "," + zoneDN;
+  std::string recordDN = "dc=" + recordName + "," + zoneDN;
 
   if (!m_connection.deleteEntry(recordDN)) {
     console::e("Error: {}", m_connection.getError());
@@ -801,7 +822,7 @@ bool PowerDNSManager::listRecords(const std::string &zoneName,
 
 std::string PowerDNSManager::getZoneDN(const std::string &zoneName,
                                        const std::string &baseDN) const {
-  return "cn=" + zoneName + "," + baseDN;
+  return "dc=" + zoneName + "," + baseDN;
 }
 
 bool PowerDNSManager::validateZoneName(const std::string &zoneName) const {
