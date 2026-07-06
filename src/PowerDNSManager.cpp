@@ -108,140 +108,140 @@ PowerDNSManager::recordTypeToAttribute(const std::string &recordType) const {
 
 namespace {
 
-const std::unordered_map<std::string, std::string> &recordTypeLongOptions() {
-  static const std::unordered_map<std::string, std::string> opts = {
+  const std::unordered_map<std::string, std::string> &recordTypeLongOptions() {
+    static const std::unordered_map<std::string, std::string> opts = {
 #define POWERDNS_RECORD_OPTION(name, type) {name, type},
 #include "PowerDNSRecordOptions.hpp"
 #undef POWERDNS_RECORD_OPTION
-  };
-  return opts;
-}
+    };
+    return opts;
+  }
 
-struct option *recordLongOptions() {
-  static struct option options[] = {{"zone", required_argument, 0, 'z'},
-                                    {"name", required_argument, 0, 'n'},
-                                    {"ttl", required_argument, 0, 't'},
-                                    {"value", required_argument, 0, 'v'},
-                                    {"type", required_argument, 0, 'y'},
+  struct option *recordLongOptions() {
+    static struct option options[] = {{"zone", required_argument, 0, 'z'},
+                                      {"name", required_argument, 0, 'n'},
+                                      {"ttl", required_argument, 0, 't'},
+                                      {"value", required_argument, 0, 'v'},
+                                      {"type", required_argument, 0, 'y'},
 #define POWERDNS_RECORD_OPTION(name, type) {name, required_argument, 0, 0},
 #include "PowerDNSRecordOptions.hpp"
 #undef POWERDNS_RECORD_OPTION
-                                    {nullptr, 0, 0, 0}};
-  return options;
-}
-
-struct RecordArgs {
-  std::string zone;
-  std::string name;
-  std::string type;
-  std::optional<std::string> value;
-  std::optional<int> ttl;
-};
-
-bool setRecordType(RecordArgs &args, const std::string &type,
-                   const std::string &val) {
-  if (!args.type.empty() && args.type != type) {
-    console::e("Error: multiple record types specified");
-    return false;
+                                      {nullptr, 0, 0, 0}};
+    return options;
   }
-  args.type = type;
-  args.value = val;
-  return true;
-}
 
-bool handleRecordOpt(int opt, int option_index, struct option *long_options,
-                     RecordArgs &args) {
-  switch (opt) {
-  case 'z':
-    args.zone = optarg;
-    return true;
-  case 'n':
-    args.name = optarg;
-    return true;
-  case 't':
-    args.ttl = std::atoi(optarg);
-    return true;
-  case 'v':
-    args.value = optarg;
-    return true;
-  case 'y':
-    args.type = optarg;
-    return true;
-  case 0: {
-    const char *optName = long_options[option_index].name;
-    auto it = recordTypeLongOptions().find(optName);
-    if (it == recordTypeLongOptions().end()) {
+  struct RecordArgs {
+    std::string zone;
+    std::string name;
+    std::string type;
+    std::optional<std::string> value;
+    std::optional<int> ttl;
+  };
+
+  bool setRecordType(RecordArgs &args, const std::string &type,
+                     const std::string &val) {
+    if (!args.type.empty() && args.type != type) {
+      console::e("Error: multiple record types specified");
       return false;
     }
-    return setRecordType(args, it->second, optarg);
+    args.type = type;
+    args.value = val;
+    return true;
   }
-  default:
-    return false;
-  }
-}
 
-bool parseRecordArgs(int argc, char *argv[], RecordArgs &args,
-                     bool requireValue) {
-  optind = 3;
-  int opt;
-  int option_index = 0;
-  struct option *long_options = recordLongOptions();
-
-  while ((opt = getopt_long(argc, argv, "z:n:t:v:y:", long_options,
-                            &option_index)) != -1) {
-    if (!handleRecordOpt(opt, option_index, long_options, args)) {
+  bool handleRecordOpt(int opt, int option_index, struct option *long_options,
+                       RecordArgs &args) {
+    switch (opt) {
+    case 'z':
+      args.zone = optarg;
+      return true;
+    case 'n':
+      args.name = optarg;
+      return true;
+    case 't':
+      args.ttl = std::atoi(optarg);
+      return true;
+    case 'v':
+      args.value = optarg;
+      return true;
+    case 'y':
+      args.type = optarg;
+      return true;
+    case 0: {
+      const char *optName = long_options[option_index].name;
+      auto it = recordTypeLongOptions().find(optName);
+      if (it == recordTypeLongOptions().end()) {
+        return false;
+      }
+      return setRecordType(args, it->second, optarg);
+    }
+    default:
       return false;
     }
   }
 
-  if (args.zone.empty() && optind < argc) {
-    args.zone = argv[optind++];
-  }
-  if (args.name.empty() && optind < argc) {
-    args.name = argv[optind++];
-  }
-  if (args.type.empty() && optind < argc) {
-    args.type = argv[optind++];
-  }
-  if (!args.value.has_value() && optind < argc) {
-    args.value = argv[optind++];
+  bool parseRecordArgs(int argc, char *argv[], RecordArgs &args,
+                       bool requireValue) {
+    optind = 3;
+    int opt;
+    int option_index = 0;
+    struct option *long_options = recordLongOptions();
+
+    while ((opt = getopt_long(argc, argv, "z:n:t:v:y:", long_options,
+                              &option_index)) != -1) {
+      if (!handleRecordOpt(opt, option_index, long_options, args)) {
+        return false;
+      }
+    }
+
+    if (args.zone.empty() && optind < argc) {
+      args.zone = argv[optind++];
+    }
+    if (args.name.empty() && optind < argc) {
+      args.name = argv[optind++];
+    }
+    if (args.type.empty() && optind < argc) {
+      args.type = argv[optind++];
+    }
+    if (!args.value.has_value() && optind < argc) {
+      args.value = argv[optind++];
+    }
+
+    if (args.zone.empty() || args.name.empty() || args.type.empty()) {
+      console::e("Error: zone, name, and record type are required");
+      return false;
+    }
+    if (requireValue && !args.value.has_value()) {
+      console::e("Error: record value is required");
+      return false;
+    }
+    return true;
   }
 
-  if (args.zone.empty() || args.name.empty() || args.type.empty()) {
-    console::e("Error: zone, name, and record type are required");
-    return false;
-  }
-  if (requireValue && !args.value.has_value()) {
-    console::e("Error: record value is required");
-    return false;
-  }
-  return true;
-}
-
-std::string parseZoneArg(int argc, char *argv[], const char *usage) {
-  optind = 3;
-  static struct option long_options[] = {{"zone", required_argument, 0, 'z'},
-                                         {nullptr, 0, 0, 0}};
-  std::string zone;
-  int opt;
-  int option_index = 0;
-  while ((opt = getopt_long(argc, argv, "z:", long_options, &option_index)) !=
-         -1) {
-    if (opt == 'z') {
-      zone = optarg;
-    } else {
+  std::string parseZoneArg(int argc, char *argv[], const char *usage) {
+    optind = 3;
+    static struct option long_options[] = {{"zone", required_argument, 0, 'z'},
+                                           {nullptr, 0, 0, 0}};
+    std::string zone;
+    int opt;
+    int option_index = 0;
+    while ((opt = getopt_long(argc, argv, "z:", long_options, &option_index)) !=
+           -1) {
+      if (opt == 'z') {
+        zone = optarg;
+      } else {
+        console::e("{}", usage);
+        return "";
+      }
+    }
+    if (zone.empty() && optind < argc) {
+      zone = argv[optind];
+    }
+    if (zone.empty()) {
       console::e("{}", usage);
-      return "";
     }
+    return zone;
   }
-  if (zone.empty() && optind < argc) {
-    zone = argv[optind];
-  }
-  if (zone.empty()) {
-    console::e("{}", usage);
-  }
-  return zone;
-}
 
 } // namespace
 
@@ -863,7 +863,8 @@ bool PowerDNSManager::listRecords(const std::string &zoneName,
 
   // Multiple records - build table with header row + data rows
   std::vector<std::string> flatData;
-  flatData.reserve((results.size() + 1) * 4); // header + each entry has ~4 attrs
+  flatData.reserve((results.size() + 1) *
+                   4); // header + each entry has ~4 attrs
 
   // Header row: Record Name, Type, Value, TTL
   flatData.push_back("Record");
