@@ -1,0 +1,12 @@
+# LDAP CLI Configuration File Example
+# Base DN for LDAP operations
+baseDN=dc=example,dc=com
+
+# LDAP Server URI
+ldapURI=ldap://ldap.example.com:389
+
+# LDAP Bind DN (optional)
+bindDN=cn=admin,dc=example,dc=com
+
+# LDAP Bind Password (optional)
+bindPassword=your_password_here
