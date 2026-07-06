@@ -37,6 +37,12 @@
 #include <string_view>
 #include <vector>
 
+#ifdef _WIN32
+#else
+#include <sys/ioctl.h>
+#include <unistd.h>
+#endif
+
 namespace console {
 
   // ANSI color codes
@@ -98,13 +104,13 @@ namespace console {
       return;
     }
 
-    // Get terminal width (default to 79 if not available or too small)
+    // Get terminal width using TIOCGWINSZ (default to 79 if not available)
     int termWidth = 79;
 
-#ifdef _SC_LINE_MAX
-    long maxLine = sysconf(_SC_LINE_MAX);
-    if (maxLine > 0 && maxLine < 256) {
-      termWidth = static_cast<int>(maxLine);
+#ifdef TIOCGWINSZ
+    struct winsize ws;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0) {
+      termWidth = static_cast<int>(ws.ws_col);
     }
 #endif
 
