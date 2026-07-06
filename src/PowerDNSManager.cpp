@@ -488,7 +488,7 @@ bool PowerDNSManager::createZone(const std::string &zoneName,
   std::vector<LDAPMod> mods;
 
   LDAPMod cnMod;
-  cnMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  cnMod.mod_op = LDAP_MOD_ADD;
   cnMod.mod_type = const_cast<char *>("cn");
   cnMod.mod_vals.modv_strvals = new char *[2];
   cnMod.mod_vals.modv_strvals[0] = const_cast<char *>(zoneName.c_str());
@@ -496,7 +496,7 @@ bool PowerDNSManager::createZone(const std::string &zoneName,
   mods.push_back(cnMod);
 
   LDAPMod objectClassMod;
-  objectClassMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  objectClassMod.mod_op = LDAP_MOD_ADD;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
   objectClassMod.mod_vals.modv_strvals = new char *[3];
   objectClassMod.mod_vals.modv_strvals[0] =
@@ -506,7 +506,7 @@ bool PowerDNSManager::createZone(const std::string &zoneName,
   mods.push_back(objectClassMod);
 
   LDAPMod domainIdMod;
-  domainIdMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  domainIdMod.mod_op = LDAP_MOD_ADD;
   domainIdMod.mod_type = const_cast<char *>("PdnsDomainId");
   domainIdMod.mod_vals.modv_strvals = new char *[2];
   domainIdMod.mod_vals.modv_strvals[0] = const_cast<char *>("0");
@@ -515,7 +515,7 @@ bool PowerDNSManager::createZone(const std::string &zoneName,
 
   if (type.has_value()) {
     LDAPMod domainTypeMod;
-    domainTypeMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    domainTypeMod.mod_op = LDAP_MOD_ADD;
     domainTypeMod.mod_type = const_cast<char *>("PdnsDomainType");
     domainTypeMod.mod_vals.modv_strvals = new char *[2];
     domainTypeMod.mod_vals.modv_strvals[0] = const_cast<char *>(type->c_str());
@@ -557,7 +557,7 @@ bool PowerDNSManager::updateZone(
       return;
     }
     LDAPMod mod;
-    mod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    mod.mod_op = LDAP_MOD_REPLACE;
     mod.mod_type = const_cast<char *>(attr);
     mod.mod_vals.modv_strvals = new char *[2];
     mod.mod_vals.modv_strvals[0] = const_cast<char *>(val->c_str());
@@ -630,7 +630,7 @@ bool PowerDNSManager::addRecord(const std::string &zoneName,
   std::vector<LDAPMod> mods;
 
   LDAPMod cnMod;
-  cnMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  cnMod.mod_op = LDAP_MOD_ADD;
   cnMod.mod_type = const_cast<char *>("cn");
   cnMod.mod_vals.modv_strvals = new char *[2];
   cnMod.mod_vals.modv_strvals[0] = const_cast<char *>(recordName.c_str());
@@ -638,7 +638,7 @@ bool PowerDNSManager::addRecord(const std::string &zoneName,
   mods.push_back(cnMod);
 
   LDAPMod objectClassMod;
-  objectClassMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  objectClassMod.mod_op = LDAP_MOD_ADD;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
   objectClassMod.mod_vals.modv_strvals = new char *[3];
   objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("dNSDomain2");
@@ -648,7 +648,7 @@ bool PowerDNSManager::addRecord(const std::string &zoneName,
   mods.push_back(objectClassMod);
 
   LDAPMod recordValueMod;
-  recordValueMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  recordValueMod.mod_op = LDAP_MOD_ADD;
   recordValueMod.mod_type = const_cast<char *>(recordAttr.c_str());
   recordValueMod.mod_vals.modv_strvals = new char *[2];
   recordValueMod.mod_vals.modv_strvals[0] =
@@ -659,7 +659,7 @@ bool PowerDNSManager::addRecord(const std::string &zoneName,
   if (ttl.has_value() && ttl.value() > 0) {
     std::string ttlStr = std::to_string(ttl.value());
     LDAPMod ttlMod;
-    ttlMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    ttlMod.mod_op = LDAP_MOD_ADD;
     ttlMod.mod_type = const_cast<char *>("dNSTTL");
     ttlMod.mod_vals.modv_strvals = new char *[2];
     ttlMod.mod_vals.modv_strvals[0] = const_cast<char *>(ttlStr.c_str());
@@ -701,7 +701,7 @@ bool PowerDNSManager::updateRecord(
 
   if (recordValue.has_value()) {
     LDAPMod recordValueMod;
-    recordValueMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    recordValueMod.mod_op = LDAP_MOD_REPLACE;
     recordValueMod.mod_type = const_cast<char *>(recordAttr.c_str());
     recordValueMod.mod_vals.modv_strvals = new char *[2];
     recordValueMod.mod_vals.modv_strvals[0] =
@@ -713,7 +713,7 @@ bool PowerDNSManager::updateRecord(
   if (ttl.has_value()) {
     std::string ttlStr = std::to_string(ttl.value());
     LDAPMod ttlMod;
-    ttlMod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    ttlMod.mod_op = LDAP_MOD_REPLACE;
     ttlMod.mod_type = const_cast<char *>("dNSTTL");
     ttlMod.mod_vals.modv_strvals = new char *[2];
     ttlMod.mod_vals.modv_strvals[0] = const_cast<char *>(ttlStr.c_str());
