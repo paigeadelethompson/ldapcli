@@ -376,16 +376,8 @@ bool KerberosManager::createPrincipal(
   std::vector<LDAPMod> mods;
 
   // Required attributes
-  LDAPMod cnMod;
-  cnMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
-  cnMod.mod_type = const_cast<char *>("cn");
-  cnMod.mod_vals.modv_strvals = new char *[2];
-  cnMod.mod_vals.modv_strvals[0] = const_cast<char *>(principal.c_str());
-  cnMod.mod_vals.modv_strvals[1] = nullptr;
-  mods.push_back(cnMod);
-
   LDAPMod objectClassMod;
-  objectClassMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  objectClassMod.mod_op = LDAP_MOD_ADD;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
   objectClassMod.mod_vals.modv_strvals = new char *[3];
   objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("krbPrincipal");
@@ -395,7 +387,7 @@ bool KerberosManager::createPrincipal(
   mods.push_back(objectClassMod);
 
   LDAPMod principalNameMod;
-  principalNameMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  principalNameMod.mod_op = LDAP_MOD_ADD;
   principalNameMod.mod_type = const_cast<char *>("krbPrincipalName");
   principalNameMod.mod_vals.modv_strvals = new char *[2];
   principalNameMod.mod_vals.modv_strvals[0] =
@@ -406,7 +398,7 @@ bool KerberosManager::createPrincipal(
   // Optional attributes
   if (password.has_value()) {
     LDAPMod passwordMod;
-    passwordMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    passwordMod.mod_op = LDAP_MOD_ADD;
     passwordMod.mod_type = const_cast<char *>("krbPrincipalKey");
     passwordMod.mod_vals.modv_strvals = new char *[2];
     passwordMod.mod_vals.modv_strvals[0] =
@@ -416,7 +408,7 @@ bool KerberosManager::createPrincipal(
   }
   if (canonicalName.has_value()) {
     LDAPMod canonicalNameMod;
-    canonicalNameMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    canonicalNameMod.mod_op = LDAP_MOD_ADD;
     canonicalNameMod.mod_type = const_cast<char *>("krbCanonicalName");
     canonicalNameMod.mod_vals.modv_strvals = new char *[2];
     canonicalNameMod.mod_vals.modv_strvals[0] =
@@ -425,7 +417,7 @@ bool KerberosManager::createPrincipal(
     mods.push_back(canonicalNameMod);
   } else if (fullname.has_value()) {
     LDAPMod fullnameMod;
-    fullnameMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    fullnameMod.mod_op = LDAP_MOD_ADD;
     fullnameMod.mod_type = const_cast<char *>("krbCanonicalName");
     fullnameMod.mod_vals.modv_strvals = new char *[2];
     fullnameMod.mod_vals.modv_strvals[0] =
@@ -435,7 +427,7 @@ bool KerberosManager::createPrincipal(
   }
   if (principalType.has_value()) {
     LDAPMod principalTypeMod;
-    principalTypeMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    principalTypeMod.mod_op = LDAP_MOD_ADD;
     principalTypeMod.mod_type = const_cast<char *>("krbPrincipalType");
     principalTypeMod.mod_vals.modv_strvals = new char *[2];
     principalTypeMod.mod_vals.modv_strvals[0] =
@@ -445,7 +437,7 @@ bool KerberosManager::createPrincipal(
   }
   if (principalExpiration.has_value()) {
     LDAPMod principalExpirationMod;
-    principalExpirationMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    principalExpirationMod.mod_op = LDAP_MOD_ADD;
     principalExpirationMod.mod_type =
         const_cast<char *>("krbPrincipalExpiration");
     principalExpirationMod.mod_vals.modv_strvals = new char *[2];
@@ -456,7 +448,7 @@ bool KerberosManager::createPrincipal(
   }
   if (passwordExpiration.has_value()) {
     LDAPMod passwordExpirationMod;
-    passwordExpirationMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    passwordExpirationMod.mod_op = LDAP_MOD_ADD;
     passwordExpirationMod.mod_type =
         const_cast<char *>("krbPasswordExpiration");
     passwordExpirationMod.mod_vals.modv_strvals = new char *[2];
@@ -467,7 +459,7 @@ bool KerberosManager::createPrincipal(
   }
   if (ticketFlags.has_value()) {
     LDAPMod ticketFlagsMod;
-    ticketFlagsMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    ticketFlagsMod.mod_op = LDAP_MOD_ADD;
     ticketFlagsMod.mod_type = const_cast<char *>("krbTicketFlags");
     ticketFlagsMod.mod_vals.modv_strvals = new char *[2];
     ticketFlagsMod.mod_vals.modv_strvals[0] =
@@ -477,7 +469,7 @@ bool KerberosManager::createPrincipal(
   }
   if (maxTicketLife.has_value()) {
     LDAPMod maxTicketLifeMod;
-    maxTicketLifeMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    maxTicketLifeMod.mod_op = LDAP_MOD_ADD;
     maxTicketLifeMod.mod_type = const_cast<char *>("krbMaxTicketLife");
     maxTicketLifeMod.mod_vals.modv_strvals = new char *[2];
     maxTicketLifeMod.mod_vals.modv_strvals[0] =
@@ -487,7 +479,7 @@ bool KerberosManager::createPrincipal(
   }
   if (maxRenewableAge.has_value()) {
     LDAPMod maxRenewableAgeMod;
-    maxRenewableAgeMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    maxRenewableAgeMod.mod_op = LDAP_MOD_ADD;
     maxRenewableAgeMod.mod_type = const_cast<char *>("krbMaxRenewableAge");
     maxRenewableAgeMod.mod_vals.modv_strvals = new char *[2];
     maxRenewableAgeMod.mod_vals.modv_strvals[0] =
@@ -497,7 +489,7 @@ bool KerberosManager::createPrincipal(
   }
   if (lastPwdChange.has_value()) {
     LDAPMod lastPwdChangeMod;
-    lastPwdChangeMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    lastPwdChangeMod.mod_op = LDAP_MOD_ADD;
     lastPwdChangeMod.mod_type = const_cast<char *>("krbLastPwdChange");
     lastPwdChangeMod.mod_vals.modv_strvals = new char *[2];
     lastPwdChangeMod.mod_vals.modv_strvals[0] =
@@ -507,7 +499,7 @@ bool KerberosManager::createPrincipal(
   }
   if (lastSuccessfulAuth.has_value()) {
     LDAPMod lastSuccessfulAuthMod;
-    lastSuccessfulAuthMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    lastSuccessfulAuthMod.mod_op = LDAP_MOD_ADD;
     lastSuccessfulAuthMod.mod_type =
         const_cast<char *>("krbLastSuccessfulAuth");
     lastSuccessfulAuthMod.mod_vals.modv_strvals = new char *[2];
@@ -518,7 +510,7 @@ bool KerberosManager::createPrincipal(
   }
   if (lastFailedAuth.has_value()) {
     LDAPMod lastFailedAuthMod;
-    lastFailedAuthMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    lastFailedAuthMod.mod_op = LDAP_MOD_ADD;
     lastFailedAuthMod.mod_type = const_cast<char *>("krbLastFailedAuth");
     lastFailedAuthMod.mod_vals.modv_strvals = new char *[2];
     lastFailedAuthMod.mod_vals.modv_strvals[0] =
@@ -528,7 +520,7 @@ bool KerberosManager::createPrincipal(
   }
   if (loginFailedCount.has_value()) {
     LDAPMod loginFailedCountMod;
-    loginFailedCountMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    loginFailedCountMod.mod_op = LDAP_MOD_ADD;
     loginFailedCountMod.mod_type = const_cast<char *>("krbLoginFailedCount");
     loginFailedCountMod.mod_vals.modv_strvals = new char *[2];
     loginFailedCountMod.mod_vals.modv_strvals[0] =
@@ -538,7 +530,7 @@ bool KerberosManager::createPrincipal(
   }
   if (principalAliases.has_value()) {
     LDAPMod principalAliasesMod;
-    principalAliasesMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    principalAliasesMod.mod_op = LDAP_MOD_ADD;
     principalAliasesMod.mod_type = const_cast<char *>("krbPrincipalAliases");
     principalAliasesMod.mod_vals.modv_strvals = new char *[2];
     principalAliasesMod.mod_vals.modv_strvals[0] =
@@ -548,7 +540,7 @@ bool KerberosManager::createPrincipal(
   }
   if (allowedToDelegateTo.has_value()) {
     LDAPMod allowedToDelegateToMod;
-    allowedToDelegateToMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    allowedToDelegateToMod.mod_op = LDAP_MOD_ADD;
     allowedToDelegateToMod.mod_type =
         const_cast<char *>("krbAllowedToDelegateTo");
     allowedToDelegateToMod.mod_vals.modv_strvals = new char *[2];
@@ -559,7 +551,7 @@ bool KerberosManager::createPrincipal(
   }
   if (principalAuthInd.has_value()) {
     LDAPMod principalAuthIndMod;
-    principalAuthIndMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    principalAuthIndMod.mod_op = LDAP_MOD_ADD;
     principalAuthIndMod.mod_type = const_cast<char *>("krbPrincipalAuthInd");
     principalAuthIndMod.mod_vals.modv_strvals = new char *[2];
     principalAuthIndMod.mod_vals.modv_strvals[0] =
@@ -613,7 +605,7 @@ bool KerberosManager::updatePrincipal(
       return;
     }
     LDAPMod mod;
-    mod.mod_op = LDAP_MOD_REPLACE | LDAP_MOD_BVALUES;
+    mod.mod_op = LDAP_MOD_REPLACE;
     mod.mod_type = const_cast<char *>(attr);
     mod.mod_vals.modv_strvals = new char *[2];
     mod.mod_vals.modv_strvals[0] = const_cast<char *>(val->c_str());
@@ -708,5 +700,5 @@ bool KerberosManager::listPrincipals(const std::string &baseDN) {
 
 std::string KerberosManager::getPrincipalDN(const std::string &principal,
                                             const std::string &baseDN) const {
-  return "cn=" + principal + "," + baseDN;
+  return "krbPrincipalName=" + principal + "," + baseDN;
 }
