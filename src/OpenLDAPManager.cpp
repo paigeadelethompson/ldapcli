@@ -551,7 +551,7 @@ bool OpenLDAPManager::createPerson(
       return;
     }
     LDAPMod mod;
-    mod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    mod.mod_op = LDAP_MOD_ADD;
     mod.mod_type = const_cast<char *>(attr);
     mod.mod_vals.modv_strvals = new char *[2];
     mod.mod_vals.modv_strvals[0] = const_cast<char *>(val->c_str());
@@ -560,7 +560,7 @@ bool OpenLDAPManager::createPerson(
   };
 
   LDAPMod objectClassMod;
-  objectClassMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  objectClassMod.mod_op = LDAP_MOD_ADD;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
   objectClassMod.mod_vals.modv_strvals = new char *[5];
   objectClassMod.mod_vals.modv_strvals[0] = const_cast<char *>("top");
@@ -572,7 +572,7 @@ bool OpenLDAPManager::createPerson(
   mods.push_back(objectClassMod);
 
   LDAPMod cnMod;
-  cnMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  cnMod.mod_op = LDAP_MOD_ADD;
   cnMod.mod_type = const_cast<char *>("cn");
   cnMod.mod_vals.modv_strvals = new char *[2];
   cnMod.mod_vals.modv_strvals[0] = const_cast<char *>(personName.c_str());
@@ -724,7 +724,7 @@ bool OpenLDAPManager::createOrganizationalUnit(
   std::vector<LDAPMod> mods;
 
   LDAPMod ouMod;
-  ouMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  ouMod.mod_op = LDAP_MOD_ADD;
   ouMod.mod_type = const_cast<char *>("ou");
   ouMod.mod_vals.modv_strvals = new char *[2];
   ouMod.mod_vals.modv_strvals[0] = const_cast<char *>(ouName.c_str());
@@ -732,7 +732,7 @@ bool OpenLDAPManager::createOrganizationalUnit(
   mods.push_back(ouMod);
 
   LDAPMod objectClassMod;
-  objectClassMod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+  objectClassMod.mod_op = LDAP_MOD_ADD;
   objectClassMod.mod_type = const_cast<char *>("objectClass");
   objectClassMod.mod_vals.modv_strvals = new char *[2];
   objectClassMod.mod_vals.modv_strvals[0] =
@@ -745,7 +745,7 @@ bool OpenLDAPManager::createOrganizationalUnit(
       return;
     }
     LDAPMod mod;
-    mod.mod_op = LDAP_MOD_ADD | LDAP_MOD_BVALUES;
+    mod.mod_op = LDAP_MOD_ADD;
     mod.mod_type = const_cast<char *>(attr);
     mod.mod_vals.modv_strvals = new char *[2];
     mod.mod_vals.modv_strvals[0] = const_cast<char *>(val->c_str());

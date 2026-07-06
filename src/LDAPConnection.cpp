@@ -65,17 +65,10 @@ std::string ModsToString(const std::string &dn, LDAPMod **mods,
 
     ldif += op + ": " + mod->mod_type + "\n";
 
-    // Handle string values (mod_values) or binary values (mod_bvalues)
+    // Handle string values (mod_values) - skip binary values in error messages
     if (mod->mod_op & LDAP_MOD_BVALUES) {
-      if (mod->mod_bvalues) {
-        for (int j = 0; mod->mod_bvalues[j] != nullptr; ++j) {
-          // Note: True binary values should be Base64 encoded in production
-          ldif += std::string(mod->mod_type) + ":: " +
-                  std::string(mod->mod_bvalues[j]->bv_val,
-                              mod->mod_bvalues[j]->bv_len) +
-                  "\n";
-        }
-      }
+      // Skip binary values in error messages (they're not printable)
+      // Binary values like Kerberos keys should not be displayed
     } else if (mod->mod_values) {
       for (int j = 0; mod->mod_values[j] != nullptr; ++j) {
         ldif += std::string(mod->mod_type) + ": " + mod->mod_values[j] + "\n";
