@@ -98,24 +98,143 @@ void printTable(const std::mdspan<ElementType, Extents> &table) {
     return;
   }
 
-  // Print header
-  for (size_t col = 0; col < table.extent(1); ++col) {
-    std::cout << std::format("{:<20}", table[0, col]);
+  // Get terminal width (default to 79 if not available or too small)
+  int termWidth = 79;
+  
+  #ifdef _SC_LINE_MAX
+  long maxLine = sysconf(_SC_LINE_MAX);
+  if (maxLine > 0 && maxLine < 256) {
+    termWidth = static_cast<int>(maxLine);
   }
-  std::cout << std::endl;
+  #endif
+  
+  // Table width is terminal width - 1, minimum 79
+  int tableMaxWidth = std::max(79, termWidth - 1);
 
-  // Print separator
+  // Calculate column widths based on content and available space
+  std::vector<size_t> colWidths(table.extent(1), 0);
+  
+  // First pass: calculate minimum required width for each column
   for (size_t col = 0; col < table.extent(1); ++col) {
-    std::cout << std::format("{:-<20}", "");
+    size_t maxLen = 0;
+    for (size_t row = 0; row < table.extent(0); ++row) {
+      std::string val = static_cast<std::string>(table[row, col]);
+      maxLen = std::max(maxLen, val.length());
+    }
+    colWidths[col] = maxLen + 2; // Add padding
   }
-  std::cout << std::endl;
 
-  // Print data rows
-  for (size_t row = 1; row < table.extent(0); ++row) {
+  // Calculate total width and adjust if needed
+  size_t totalWidth = 0;
+  for (size_t w : colWidths) {
+    totalWidth += w;
+  }
+
+  // If table is wider than terminal, reduce column widths proportionally
+  if (totalWidth > static_cast<size_t>(tableMaxWidth)) {
+    double scale = static_cast<double>(tableMaxWidth - table.extent(1)) / totalWidth;
     for (size_t col = 0; col < table.extent(1); ++col) {
-      std::cout << std::format("{:<20}", table[row, col]);
+      colWidths[col] = std::max(static_cast<size_t>(2), 
+                                static_cast<size_t>(colWidths[col] * scale));
+    }
+  }
+
+  // Helper function to wrap text into lines of given width
+  auto wrapText = [&](const std::string &text, size_t width) -> std::vector<std::string> {
+    std::vector<std::string> lines;
+    if (width <= 1 || text.empty()) {
+      lines.push_back(text);
+      return lines;
+    }
+
+    size_t pos = 0;
+    while (pos < text.length()) {
+      size_t remaining = text.length() - pos;
+      if (remaining <= width) {
+        lines.push_back(text.substr(pos));
+        break;
+      }
+      
+      // Find last space within the width limit
+      size_t endPos = pos + width;
+      size_t lastSpace = text.find_last_of(' ', endPos - 1);
+      
+      if (lastSpace != std::string::npos && lastSpace >= pos) {
+        lines.push_back(text.substr(pos, lastSpace - pos));
+        pos = lastSpace + 1; // Skip the space
+      } else {
+        // No space found, break at width
+        lines.push_back(text.substr(pos, width));
+        pos += width;
+      }
+    }
+    return lines;
+  };
+
+  // Helper to print a cell's wrapped content with proper alignment
+  auto printCell = [&](const std::string &text, size_t width) {
+    auto lines = wrapText(text, width);
+    for (size_t i = 0; i < lines.size(); ++i) {
+      if (i == 0) {
+        std::cout << std::format("{:<{}}", lines[i], width);
+      } else {
+        // Continuation line - just print with same width
+        std::cout << std::format("{:<{}}", lines[i], width);
+      }
+    }
+  };
+
+  // Print header row (may span multiple lines)
+  size_t maxHeaderLines = 0;
+  std::vector<std::vector<std::string>> headerLines(table.extent(1));
+  for (size_t col = 0; col < table.extent(1); ++col) {
+    headerLines[col] = wrapText(static_cast<std::string>(table[0, col]), colWidths[col]);
+    maxHeaderLines = std::max(maxHeaderLines, headerLines[col].size());
+  }
+
+  for (size_t lineIdx = 0; lineIdx < maxHeaderLines; ++lineIdx) {
+    for (size_t col = 0; col < table.extent(1); ++col) {
+      if (col > 0) std::cout << "|";
+      if (lineIdx < headerLines[col].size()) {
+        std::cout << std::format("{:<{}}", headerLines[col][lineIdx], colWidths[col]);
+      } else {
+        std::cout << std::string(colWidths[col], ' ');
+      }
     }
     std::cout << std::endl;
+  }
+
+  // Print separator line
+  for (size_t col = 0; col < table.extent(1); ++col) {
+    if (col > 0) std::cout << "|";
+    std::string sep(colWidths[col], '-');
+    std::cout << std::format("{:<{}}", sep, colWidths[col]);
+  }
+  std::cout << std::endl;
+
+  // Print data rows (each may span multiple lines)
+  for (size_t row = 1; row < table.extent(0); ++row) {
+    size_t maxRowLines = 0;
+    std::vector<std::vector<std::string>> rowLines(table.extent(1));
+    
+    // First pass: calculate max lines needed for this row
+    for (size_t col = 0; col < table.extent(1); ++col) {
+      rowLines[col] = wrapText(static_cast<std::string>(table[row, col]), colWidths[col]);
+      maxRowLines = std::max(maxRowLines, rowLines[col].size());
+    }
+
+    // Print each line of the row
+    for (size_t lineIdx = 0; lineIdx < maxRowLines; ++lineIdx) {
+      for (size_t col = 0; col < table.extent(1); ++col) {
+        if (col > 0) std::cout << "|";
+        if (lineIdx < rowLines[col].size()) {
+          std::cout << std::format("{:<{}}", rowLines[col][lineIdx], colWidths[col]);
+        } else {
+          std::cout << std::string(colWidths[col], ' ');
+        }
+      }
+      std::cout << std::endl;
+    }
   }
 }
 
